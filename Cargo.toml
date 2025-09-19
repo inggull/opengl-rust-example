@@ -1,3 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["01_hello_window"]
+members = [
+    "01_hello_window",
+    "02_shader",
+]

@@ -1,5 +1,6 @@
 mod errors;
 mod common;
+mod shader;
 
 use glfw::Context;
 use glad::gl;
@@ -15,6 +16,7 @@ fn main() -> errors::Result<(), errors::Error> {
 fn inner_main() -> Result<(), errors::Error> {
     // Initialize glfw
     spdlog::info!("Initialize glfw");
+    
     let mut glfw = glfw::init_no_callbacks()?; // From 트레이트 구현으로 errors::Error 타입으로 변환됨
 
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
@@ -43,6 +45,11 @@ fn inner_main() -> Result<(), errors::Error> {
         gl::Viewport(0, 0, WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32);  // State-setting function
         gl::ClearColor(0.2, 0.2, 0.2, 1.0);  // State-setting function
     }
+
+    let vertex_shader = shader::Shader::new("shader/simple.vert", gl::VERTEX_SHADER)?;
+    let fragment_shader = shader::Shader::new("shader/simple.frag", gl::FRAGMENT_SHADER)?;
+    spdlog::info!("Created vertex shader({})", vertex_shader.get());
+    spdlog::info!("Created fragment shader({})", fragment_shader.get());
 
     window.set_framebuffer_size_callback(on_frame_buffer_size_event);
     window.set_key_callback(on_key_event);
