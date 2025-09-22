@@ -1,6 +1,7 @@
 mod errors;
 mod common;
 mod shader;
+mod program;
 
 use glfw::Context;
 use glad::gl;
@@ -50,6 +51,9 @@ fn inner_main() -> Result<(), errors::Error> {
     let fragment_shader = shader::Shader::create("shader/simple.frag", gl::FRAGMENT_SHADER)?;
     spdlog::info!("Created vertex shader({})", vertex_shader.get());
     spdlog::info!("Created fragment shader({})", fragment_shader.get());
+
+    let program = program::Program::create(vec![&vertex_shader, &fragment_shader])?;
+    spdlog::info!("Created program({})", program.get());
 
     window.set_framebuffer_size_callback(on_frame_buffer_size_event);
     window.set_key_callback(on_key_event);
