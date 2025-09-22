@@ -9,11 +9,9 @@ impl std::fmt::Debug for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::InitError(reason) => {
-                spdlog::error!("Failed to initialize glfw, Reason: {}", reason);
-                write!(f, "Failed to initialize glfw, Reason: {}", reason)
+                write!(f, "Failed to initialize glfw\n{}", reason)
             }
             Error::CreateWindowError => {
-                spdlog::error!("Failed to create GLFW window");
                 write!(f, "Failed to create GLFW window")
             }
         }
@@ -45,7 +43,7 @@ impl<T, E> std::process::Termination for Result<T, E> where T: std::process::Ter
         match self.0 {
             Ok(val) => val.report(),
             Err(err) => {
-                eprintln!("{:?}", err);
+                spdlog::error!("{:?}", err);
                 std::process::ExitCode::FAILURE
             },
         }
