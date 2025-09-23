@@ -6,4 +6,5 @@ members = [
     "03_program",
     "04_context",
     "05_hello_triangle",
+    "06_buffer",
 ]

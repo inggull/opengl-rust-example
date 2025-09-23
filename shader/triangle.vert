@@ -1,6 +1,6 @@
 #version 330 core
-layout (location = 0) in vec3 position;  // vao의 0번 특성으로 자동 할당
-layout (location = 1) in vec3 color;  // vao의 1번 특성으로 자동 할당
+layout (location = 0) in vec3 position;  // vao의 0번 속성으로 자동 할당
+layout (location = 1) in vec3 color;  // vao의 1번 속성으로 자동 할당
 
 out vec4 vertex_color;  // fragment shader로 넘어갈 색상 값
 
