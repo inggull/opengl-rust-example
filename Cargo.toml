@@ -3,5 +3,6 @@ resolver = "3"
 members = [
     "01_hello_window",
     "02_shader",
-    "03_program"
+    "03_program",
+    "04_context",
 ]

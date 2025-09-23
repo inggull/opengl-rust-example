@@ -42,11 +42,9 @@ impl Shader {
 
 impl Drop for Shader {
     fn drop(&mut self) {
-        if self.shader != 0 {
-            unsafe {
-                gl::DeleteShader(self.shader);
-            }
-            spdlog::info!("Dropped shader({})", self.shader);
+        unsafe {
+            gl::DeleteShader(self.shader);
         }
+        spdlog::info!("Dropped shader({})", self.shader);
     }
 }

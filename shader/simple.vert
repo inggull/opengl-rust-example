@@ -1,12 +1,9 @@
 #version 330 core
-layout (location = 0) in vec3 position;  // attribute #0
-layout (location = 1) in vec3 color;  // attribute #1
 
-out vec4 vertex_color;  // fragment shader로 넘어갈 색상 값
+uniform vec3 global_position;  // 프로그램이 셰이더에 전달 가능한 전역 변수로, 병렬로 수행되는 모든 셰이더 스레드들이 동일한 값을 전달받는다
 
 void main() {
-    gl_Position = vec4(position, 1.0);  // 정점 출력 위치 값을 생성
-    vertex_color = vec4(color, 1.0);
+    gl_Position = vec4(global_position, 1.0);  // 정점 출력 위치 값을 생성
 }
 
 // 기본 타입: int, float, double, uint, bool

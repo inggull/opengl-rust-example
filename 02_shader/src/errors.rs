@@ -10,17 +10,17 @@ impl std::error::Error for Error {}
 impl std::fmt::Debug for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::InitError(reason) => {
-                write!(f, "Failed to initialize glfw\n{}", reason)
+            Error::InitError(description) => {
+                write!(f, "Failed to initialize glfw\n{}", description)
             }
             Error::CreateWindowError => {
                 write!(f, "Failed to create GLFW window")
             }
-            Error::ReadFileError(reason) => {
-                write!(f, "Failed to read file\n{}", reason)
+            Error::ReadFileError(description) => {
+                write!(f, "Failed to read file\n{}", description)
             }
-            Error::CompileShaderError(reason) => {
-                write!(f, "Failed to compile shader\n{}", reason)
+            Error::CompileShaderError(description) => {
+                write!(f, "Failed to compile shader\n{}", description)
             }
         }
     }
@@ -33,14 +33,14 @@ impl std::fmt::Display for Error {
 }
 
 impl From<glfw::InitError> for Error {
-    fn from(reason: glfw::InitError) -> Self {
-        Error::InitError(reason)
+    fn from(description: glfw::InitError) -> Self {
+        Error::InitError(description)
     }
 }
 
 impl From<std::io::Error> for Error {
-    fn from(reason: std::io::Error) -> Self {
-        Error::ReadFileError(reason)
+    fn from(description: std::io::Error) -> Self {
+        Error::ReadFileError(description)
     }
 }
 

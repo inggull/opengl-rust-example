@@ -5,7 +5,7 @@ mod shader;
 use glfw::Context;
 use glad::gl;
 
-const WINDOW_NAME: &'static str = "Hello, window!";
+const WINDOW_NAME: &'static str = "Shader";
 const WINDOW_WIDTH: u32 = 640;
 const WINDOW_HEIGHT: u32 = 480;
 

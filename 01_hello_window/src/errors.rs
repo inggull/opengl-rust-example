@@ -8,8 +8,8 @@ impl std::error::Error for Error {}
 impl std::fmt::Debug for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::InitError(reason) => {
-                write!(f, "Failed to initialize glfw\n{}", reason)
+            Error::InitError(description) => {
+                write!(f, "Failed to initialize glfw\n{}", description)
             }
             Error::CreateWindowError => {
                 write!(f, "Failed to create GLFW window")
@@ -25,8 +25,8 @@ impl std::fmt::Display for Error {
 }
 
 impl From<glfw::InitError> for Error {
-    fn from(reason: glfw::InitError) -> Self {
-        Error::InitError(reason)
+    fn from(description: glfw::InitError) -> Self {
+        Error::InitError(description)
     }
 }
 
