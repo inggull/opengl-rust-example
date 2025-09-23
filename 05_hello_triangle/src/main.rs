@@ -1,11 +1,13 @@
 mod errors;
 mod common;
 mod shader;
+mod program;
+mod context;
 
 use glfw::Context;
 use glad::gl;
 
-const WINDOW_NAME: &'static str = "Shader";
+const WINDOW_NAME: &'static str = "Hello, triangle!";
 const WINDOW_WIDTH: u32 = 640;
 const WINDOW_HEIGHT: u32 = 480;
 
@@ -43,13 +45,9 @@ fn inner_main() -> Result<(), errors::Error> {
         let gl_version = gl::GetString(gl::VERSION);
         spdlog::info!("Loaded OpenGL {}", common::c_str_to_string(gl_version.cast()).unwrap_or(String::from("Unknown")));
         gl::Viewport(0, 0, WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32);  // State-setting function
-        gl::ClearColor(0.2, 0.2, 0.2, 1.0);  // State-setting function
     }
 
-    let vertex_shader = shader::Shader::create("shader/simple.vert", gl::VERTEX_SHADER)?;
-    let fragment_shader = shader::Shader::create("shader/simple.frag", gl::FRAGMENT_SHADER)?;
-    spdlog::info!("Created vertex shader({})", vertex_shader.get());
-    spdlog::info!("Created fragment shader({})", fragment_shader.get());
+    let context = context::Context::create()?;
 
     window.set_framebuffer_size_callback(on_frame_buffer_size_event);
     window.set_key_callback(on_key_event);
@@ -58,9 +56,7 @@ fn inner_main() -> Result<(), errors::Error> {
     spdlog::info!("Start main loop");
     while !window.should_close() {
         glfw.poll_events();
-        unsafe {
-            gl::Clear(gl::COLOR_BUFFER_BIT);  // State-using function
-        }
+        context.render();
         window.swap_buffers();
     }
 

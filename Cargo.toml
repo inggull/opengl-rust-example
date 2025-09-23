@@ -5,4 +5,5 @@ members = [
     "02_shader",
     "03_program",
     "04_context",
+    "05_hello_triangle",
 ]

@@ -65,7 +65,9 @@ fn inner_main() -> Result<(), errors::Error> {
 
 fn on_frame_buffer_size_event(_: &mut glfw::Window, width: i32, height: i32) {
     spdlog::info!("FramebufferSize changed: {width} x {height}");
-    unsafe { gl::Viewport(0, 0, width, height); }
+    unsafe {
+        gl::Viewport(0, 0, width, height);
+    }
 }
 
 fn on_key_event(window: &mut glfw::Window, key: glfw::Key, scancode: glfw::Scancode, action: glfw::Action, modifiers: glfw::Modifiers) {

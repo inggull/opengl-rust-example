@@ -1,6 +1,4 @@
-use crate::errors;
-
-use super::{shader, program};
+use super::{errors, shader, program};
 use glad::gl;
 
 pub struct Context {
@@ -24,7 +22,7 @@ impl Context {
         
         unsafe {
             gl::ClearColor(0.2, 0.2, 0.2, 1.0);  // State-setting function
-            gl::GenVertexArrays(1, &mut vao);
+            gl::GenVertexArrays(1, &mut vao);  // 새로운 vao를 생성
             spdlog::info!("Created vertex array({})", vao);
             // 셰이더의 전역 변수에 값을 전달
             gl::UseProgram(program.get());  // 사용할 프로그램을 지정
@@ -38,7 +36,7 @@ impl Context {
     pub fn render(&self) {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT);  // State-using function
-            gl::BindVertexArray(self.vao);  // 사용할 버텍스 배열 오브젝트을 지정
+            gl::BindVertexArray(self.vao);  // 사용할 vao를 지정
             gl::UseProgram(self.program.get());
             gl::DrawArrays(gl::POINTS, 0, 1);
         }
