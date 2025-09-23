@@ -22,6 +22,7 @@ impl Context {
         
         unsafe {
             gl::ClearColor(0.2, 0.2, 0.2, 1.0);  // State-setting function
+
             gl::GenVertexArrays(1, &mut vao);  // 새로운 vao를 생성
             spdlog::info!("Created vertex array({})", vao);
             // 셰이더의 전역 변수에 값을 전달

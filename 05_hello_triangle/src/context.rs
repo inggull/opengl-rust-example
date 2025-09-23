@@ -34,6 +34,7 @@ impl Context {
         // 사용할 vao를 먼저 바인딩 해줘야 나머지 오르젝트들이 vao에 저장된다
         unsafe {
             gl::ClearColor(0.2, 0.2, 0.2, 1.0);  // State-setting function
+
             gl::GenVertexArrays(1, &mut vao);  // 새로운 vao를 생성
             spdlog::info!("Created vertex array({})", vao);
             gl::BindVertexArray(vao);  // 사용할 vao를 지정
@@ -45,11 +46,10 @@ impl Context {
 
             // 초기에 `VertexAttribPointer`의 포인터는 각 버택스 버퍼에 바인딩된 배열의 시작 주소를 가리켰지만, vao가 등장하면서 vao가 가리키는 배열의 오프셋을 의미하게 되었다
             // 속성 0번: position
-            gl::EnableVertexAttribArray(0);  // vao의 속성 0번을 활성화
+            gl::EnableVertexAttribArray(0);  // vao의 0번 속성을 활성화
             gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 6) as i32, (size_of::<f32>() * 0) as *const _);  // vao의 속성 0번에 해당하는 vbo 데이터를 전달
-
             // 속성 1번: color
-            gl::EnableVertexAttribArray(1);  // vao의 속성 1번을 활성화
+            gl::EnableVertexAttribArray(1);  // vao의 1번 속성을 활성화
             gl::VertexAttribPointer(1, 3, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 6) as i32, (size_of::<f32>() * 3) as *const _);  // vao의 속성 1번에 해당하는 vbo 데이터를 전달
 
             gl::GenBuffers(1, &mut ebo);  // 새로운 ebo를 생성
