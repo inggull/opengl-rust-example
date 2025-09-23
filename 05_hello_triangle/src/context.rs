@@ -67,7 +67,7 @@ impl Context {
     pub fn render(&self) {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT);  // State-using function
-            gl::UseProgram(self.program.get());
+            gl::UseProgram(self.program.get());  // 사용할 프로그램을 지정
             gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, std::ptr::null());
         }
     }
