@@ -63,7 +63,7 @@ impl Context {
             gl::ActiveTexture(gl::TEXTURE1); // 1번 텍스쳐를 활성화
             tbo2.bind(); // 사용할 tbo를 지정
 
-            gl::UseProgram(program.get());  // 사용할 프로그램을 지정
+            program.use_();  // 사용할 프로그램을 지정
             gl::Uniform1i(gl::GetUniformLocation(program.get(), c"texture0".as_ptr()), 0); // 프로그램의 전역 변수 `texture0`에 0을 할당
             gl::Uniform1i(gl::GetUniformLocation(program.get(), c"texture1".as_ptr()), 1); // 프로그램의 전역 변수 `texture1`에 1을 할당
 
@@ -77,7 +77,7 @@ impl Context {
     pub fn render(&self) {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT); // State-using function
-            gl::UseProgram(self.program.get()); // 사용할 프로그램을 지정
+            self.program.use_(); // 사용할 프로그램을 지정
             gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
         }
     }

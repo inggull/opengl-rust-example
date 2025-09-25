@@ -8,7 +8,6 @@ pub struct Context {
 
 impl Context {
     pub fn create() -> Result<Context, errors::Error> {
-        let program;
         let mut vao = 0;
 
         let vertex_shader = shader::Shader::create("shader/simple.vert", gl::VERTEX_SHADER)?;
@@ -16,7 +15,7 @@ impl Context {
         spdlog::info!("Created vertex shader({})", vertex_shader.get());
         spdlog::info!("Created fragment shader({})", fragment_shader.get());
 
-        program = program::Program::create(vec![&vertex_shader, &fragment_shader])?;
+        let program = program::Program::create(vec![&vertex_shader, &fragment_shader])?;
         spdlog::info!("Created program({})", program.get());
 
         unsafe {
@@ -25,7 +24,7 @@ impl Context {
             gl::GenVertexArrays(1, &mut vao); // 새로운 vao를 생성
             spdlog::info!("Created vertex array({})", vao);
             // 셰이더의 전역 변수에 값을 전달
-            gl::UseProgram(program.get()); // 사용할 프로그램을 지정
+            program.use_(); // 사용할 프로그램을 지정
             gl::Uniform3f(gl::GetUniformLocation(program.get(), c"global_position".as_ptr()), 0.0, 0.0, 0.0);
             gl::Uniform4f(gl::GetUniformLocation(program.get(), c"global_color".as_ptr()), 1.0, 1.0, 1.0, 1.0);
         }
@@ -37,7 +36,7 @@ impl Context {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT); // State-using function
             gl::BindVertexArray(self.vao); // 사용할 vao를 지정
-            gl::UseProgram(self.program.get());
+            self.program.use_();
             gl::DrawArrays(gl::POINTS, 0, 1);
         }
     }

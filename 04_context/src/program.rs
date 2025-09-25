@@ -34,6 +34,12 @@ impl Program {
     pub fn get(&self) -> u32 {
         self.program
     }
+
+    pub fn use_(&self) {
+        unsafe {
+            gl::UseProgram(self.program);
+        }
+    }
 }
 
 impl Drop for Program {
