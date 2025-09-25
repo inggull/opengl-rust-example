@@ -33,29 +33,29 @@ impl Context {
 
         // 사용할 vao를 먼저 바인딩 해줘야 나머지 오르젝트들이 vao에 저장된다
         unsafe {
-            gl::ClearColor(0.2, 0.2, 0.2, 1.0);  // State-setting function
+            gl::ClearColor(0.2, 0.2, 0.2, 1.0); // State-setting function
 
-            gl::GenVertexArrays(1, &mut vao);  // 새로운 vao를 생성
+            gl::GenVertexArrays(1, &mut vao); // 새로운 vao를 생성
             spdlog::info!("Created vertex array({})", vao);
-            gl::BindVertexArray(vao);  // 사용할 vao를 지정
+            gl::BindVertexArray(vao); // 사용할 vao를 지정
 
-            gl::GenBuffers(1, &mut vbo);  // 새로운 vbo를 생성
+            gl::GenBuffers(1, &mut vbo); // 새로운 vbo를 생성
             spdlog::info!("Created vertex buffer({})", vbo);
-            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);  // 사용할 vbo를 지정
-            gl::BufferData(gl::ARRAY_BUFFER, size_of_val(&vertices).cast_signed(), vertices.as_ptr().cast(), gl::STATIC_DRAW);  // vbo에 데이터를 전달
+            gl::BindBuffer(gl::ARRAY_BUFFER, vbo); // 사용할 vbo를 지정
+            gl::BufferData(gl::ARRAY_BUFFER, size_of_val(&vertices).cast_signed(), vertices.as_ptr().cast(), gl::STATIC_DRAW); // vbo에 데이터를 전달
 
             // 초기에 `VertexAttribPointer`의 포인터는 각 버택스 버퍼에 바인딩된 배열의 시작 주소를 가리켰지만, vao가 등장하면서 vao가 가리키는 배열의 오프셋을 의미하게 되었다
             // 속성 0번: position
             gl::EnableVertexAttribArray(0);  // vao의 0번 속성을 활성화
-            gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 6) as i32, (size_of::<f32>() * 0) as *const _);  // vao의 속성 0번에 해당하는 vbo 데이터를 전달
+            gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 6) as i32, (size_of::<f32>() * 0) as *const _); // vao의 속성 0번에 해당하는 vbo 데이터를 전달
             // 속성 1번: color
             gl::EnableVertexAttribArray(1);  // vao의 1번 속성을 활성화
-            gl::VertexAttribPointer(1, 3, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 6) as i32, (size_of::<f32>() * 3) as *const _);  // vao의 속성 1번에 해당하는 vbo 데이터를 전달
+            gl::VertexAttribPointer(1, 3, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 6) as i32, (size_of::<f32>() * 3) as *const _); // vao의 속성 1번에 해당하는 vbo 데이터를 전달
 
             gl::GenBuffers(1, &mut ebo);  // 새로운 ebo를 생성
             spdlog::info!("Created element buffer({})", ebo);
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);  // 사용할 ebo를 지정
-            gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, size_of_val(&indices).cast_signed(), indices.as_ptr().cast(), gl::STATIC_DRAW);  // ebo에 데이터를 전달
+            gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, size_of_val(&indices).cast_signed(), indices.as_ptr().cast(), gl::STATIC_DRAW); // ebo에 데이터를 전달
         }
 
         Ok(Context { program, vao, vbo, ebo })
@@ -63,8 +63,8 @@ impl Context {
 
     pub fn render(&self) {
         unsafe {
-            gl::Clear(gl::COLOR_BUFFER_BIT);  // State-using function
-            gl::UseProgram(self.program.get());  // 사용할 프로그램을 지정
+            gl::Clear(gl::COLOR_BUFFER_BIT); // State-using function
+            gl::UseProgram(self.program.get()); // 사용할 프로그램을 지정
             gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, std::ptr::null());
         }
     }

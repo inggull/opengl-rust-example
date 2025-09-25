@@ -47,7 +47,7 @@ fn inner_main() -> Result<(), errors::Error> {
     unsafe {
         let gl_version = gl::GetString(gl::VERSION);
         spdlog::info!("Loaded OpenGL {}", common::c_str_to_string(gl_version.cast()).unwrap_or(String::from("Unknown")));
-        gl::Viewport(0, 0, WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32);  // State-setting function
+        gl::Viewport(0, 0, WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32); // State-setting function
     }
 
     let context = context::Context::create()?;

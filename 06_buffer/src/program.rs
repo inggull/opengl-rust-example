@@ -24,7 +24,7 @@ impl Program {
                 let mut length = 0;
                 gl::GetProgramInfoLog(program, 1024, &mut length, info_log.as_mut_ptr());
                 let reason = common::c_str_to_string(info_log.as_ptr()).unwrap_or("".to_owned());
-                return Err(errors::Error::CompileProgramError(reason))
+                return Err(errors::Error::LinkProgramError(reason))
             }
         }
 

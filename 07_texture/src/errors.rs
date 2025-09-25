@@ -3,7 +3,7 @@ pub enum Error {
     CreateWindowError,
     ReadFileError(std::io::Error),
     CompileShaderError(String),
-    CompileProgramError(String),
+    LinkProgramError(String),
     ImageError(image::ImageError),
 }
 
@@ -24,8 +24,8 @@ impl std::fmt::Debug for Error {
             Error::CompileShaderError(description) => {
                 write!(f, "Failed to compile shader\n{}", description)
             }
-            Error::CompileProgramError(description) => {
-                write!(f, "Failed to compile program\n{}", description)
+            Error::LinkProgramError(description) => {
+                write!(f, "Failed to link program\n{}", description)
             }
             Error::ImageError(description) => {
                 write!(f, "Failed to open image\n{}", description)

@@ -40,8 +40,8 @@ fn inner_main() -> Result<(), errors::Error> {
     unsafe {
         let gl_version = gl::GetString(gl::VERSION);
         spdlog::info!("Loaded OpenGL {}", common::c_str_to_string(gl_version.cast()).unwrap_or(String::from("Unknown")));
-        gl::Viewport(0, 0, WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32);  // State-setting function
-        gl::ClearColor(0.2, 0.2, 0.2, 1.0);  // State-setting function
+        gl::Viewport(0, 0, WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32); // State-setting function
+        gl::ClearColor(0.2, 0.2, 0.2, 1.0); // State-setting function
     }
 
     window.set_framebuffer_size_callback(on_frame_buffer_size_event);
@@ -52,7 +52,7 @@ fn inner_main() -> Result<(), errors::Error> {
     while !window.should_close() {
         glfw.poll_events();
         unsafe {
-            gl::Clear(gl::COLOR_BUFFER_BIT);  // State-using function
+            gl::Clear(gl::COLOR_BUFFER_BIT); // State-using function
         }
         window.swap_buffers();
     }
