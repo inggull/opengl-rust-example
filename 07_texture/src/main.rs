@@ -6,6 +6,7 @@ mod context;
 mod vertex_array;
 mod buffer;
 mod texture;
+mod image;
 
 use glfw::Context;
 use glad::gl;

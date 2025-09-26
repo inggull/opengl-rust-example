@@ -8,8 +8,6 @@ pub struct Context {
 
 impl Context {
     pub fn create() -> Result<Context, errors::Error> {
-        let mut vao = 0;
-
         let vertex_shader = shader::Shader::create("shader/simple.vert", gl::VERTEX_SHADER)?;
         let fragment_shader = shader::Shader::create("shader/simple.frag", gl::FRAGMENT_SHADER)?;
         spdlog::info!("Created vertex shader({})", vertex_shader.get());
@@ -17,6 +15,8 @@ impl Context {
 
         let program = program::Program::create(vec![&vertex_shader, &fragment_shader])?;
         spdlog::info!("Created program({})", program.get());
+
+        let mut vao = 0;
 
         unsafe {
             gl::ClearColor(0.2, 0.2, 0.2, 1.0); // State-setting function

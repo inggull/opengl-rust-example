@@ -6,7 +6,7 @@ pub struct Shader {
 }
 
 impl Shader {
-    pub fn create<S>(file_path: S, shader_type: u32) -> Result<Shader, errors::Error> where S: AsRef<str> {
+    pub fn create<S>(file_path: S, type_: u32) -> Result<Shader, errors::Error> where S: AsRef<str> {
         let shader;
 
         // Load shader file
@@ -15,7 +15,7 @@ impl Shader {
 
         // Create and compile shader
         unsafe {
-            shader = gl::CreateShader(shader_type); // 쉐이더 핸들을 정수 형태로 반환
+            shader = gl::CreateShader(type_); // 쉐이더 핸들을 정수 형태로 반환
             // 하나의 쉐이더에 여러 개의 소스 코드를 전달할 수 있다
             gl::ShaderSource(shader, 1, &text.as_ptr().cast(), &text_len);
             gl::CompileShader(shader);

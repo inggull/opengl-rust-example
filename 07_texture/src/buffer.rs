@@ -36,6 +36,6 @@ impl Drop for Buffer {
         unsafe {
             gl::DeleteBuffers(1, &mut self.buffer);
         }
-        spdlog::info!("Dropped vertex buffer({})", self.buffer);
+        spdlog::info!("Dropped buffer({})", self.buffer);
     }
 }

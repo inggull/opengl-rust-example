@@ -1,3 +1,4 @@
+use super::image;
 use glad::gl;
 
 pub struct Texture {
@@ -5,7 +6,7 @@ pub struct Texture {
 }
 
 impl Texture {
-    pub fn create(image: &image::DynamicImage) -> Texture {
+    pub fn create(image: &image::Image) -> Texture {
         let mut texture = 0;
 
         unsafe {
@@ -46,18 +47,16 @@ pub fn set_wrap(wrap_s: u32, wrap_t: u32) {
     }
 }
 
-pub fn set_texture(image: &image::DynamicImage) {
+pub fn set_texture(image: &image::Image) {
     unsafe {
-        gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA.cast_signed(), image.width().cast_signed(), image.height().cast_signed(), 0,
-            match image.color() {
-                image::ColorType::Rgb8 => gl::RGB,
+        gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA.cast_signed(), image.get_width().cast_signed(), image.get_height().cast_signed(), 0,
+            match image.get_channel_count() {
+                1 => gl::RED,
+                2 => gl::RG,
+                3 => gl::RGB,
                 _ => gl::RGBA,
             },
-            match image.color().bits_per_pixel() {
-                16 => gl::UNSIGNED_SHORT,
-                _ => gl::UNSIGNED_BYTE,
-            },
-            image.as_bytes().as_ptr().cast()
+            gl::UNSIGNED_BYTE, image.get_data().as_ptr().cast()
         );
         gl::GenerateMipmap(gl::TEXTURE_2D);
     }

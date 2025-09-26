@@ -1,4 +1,4 @@
-use super::{errors, shader, program, vertex_array, buffer, texture};
+use super::{errors, shader, program, vertex_array, buffer, texture, image};
 use glad::gl;
 
 pub struct Context {
@@ -49,11 +49,10 @@ impl Context {
         // 속성 2번: texture coordinate
         vao.set(2, 2, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 8) as i32, (size_of::<f32>() * 6) as *const _); // vao의 2번 속성을 활성화하고, 해당하는 vbo 데이터를 전달
 
-        // 이미지 파일과 OpenGL은 이미지의 시작점이 상하 대칭 관계에 있기 때문에 불러온 이미지 파일을 상하 반전시켜야 한다
-        let logo = image::open("resources/images/logo.png")?.flipv();
-        spdlog::info!("Loaded image file \"resources/images/logo.png\"({} x {}, {} channels, {} bits)", logo.width(), logo.height(), logo.color().channel_count(), logo.color().bits_per_pixel());
-        let rust = image::open("resources/images/rust.jpg")?.flipv();
-        spdlog::info!("Loaded image file \"resources/images/rust.jpg\"({} x {}, {} channels, {} bits)", rust.width(), rust.height(), rust.color().channel_count(), rust.color().bits_per_pixel());
+        let logo = image::Image::load("resources/images/logo.png")?;
+        spdlog::info!("Loaded image file \"resources/images/logo.png\" ({} x {}, {} channels)", logo.get_width(), logo.get_height(), logo.get_channel_count());
+        let rust = image::Image::load("resources/images/rust.jpg")?;
+        spdlog::info!("Loaded image file \"resources/images/rust.jpg\" ({} x {}, {} channels)", rust.get_width(), rust.get_height(), rust.get_channel_count());
 
         let tbo1 = texture::Texture::create(&logo);
         let tbo2 = texture::Texture::create(&rust);
