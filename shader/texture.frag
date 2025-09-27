@@ -11,7 +11,7 @@ out vec4 fragment_color; // 최종 출력 색상
 void main() {
     vec4 color0 = texture(texture0, vertex_texture_coord);
     vec4 color1 = texture(texture1, vertex_texture_coord);
-    vec4 tmp = vertex_color * 0.1 + color1 * 0.3 + 0 * 0.6;
+    vec4 tmp = mix(color1 / 3, vertex_color, 0.08);
     fragment_color = vec4(tmp.r, tmp.g, tmp.b, color0.a);
     // fragment_color = mix(vertex_color, color1, 0.2);
 }

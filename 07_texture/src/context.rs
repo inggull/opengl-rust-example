@@ -21,10 +21,10 @@ impl Context {
         spdlog::info!("Created program({})", program.get());
 
         let vertices: [f32; 32] = [
-            0.5, 0.5, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
+            0.5, 0.5, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0,
             0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
             -0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-            -0.5, 0.5, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0,
+            -0.5, 0.5, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
         ];
         let indices: [u32; 6] = [
             0, 1, 2, // 첫 번째 삼각형
@@ -56,6 +56,7 @@ impl Context {
 
         let tbo1 = texture::Texture::create(&logo);
         let tbo2 = texture::Texture::create(&rust);
+
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0); // 0번 텍스쳐를 활성화
             tbo1.bind(); // 사용할 tbo를 지정
