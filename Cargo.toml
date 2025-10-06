@@ -8,4 +8,5 @@ members = [
     "05_hello_triangle",
     "06_buffer",
     "07_texture",
+    "08_transform",
 ]
