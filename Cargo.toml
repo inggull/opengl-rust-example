@@ -9,4 +9,5 @@ members = [
     "06_buffer",
     "07_texture",
     "08_transform",
+    "09_camera",
 ]

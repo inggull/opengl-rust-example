@@ -1,0 +1,15 @@
+[package]
+name = "camera"
+version = "0.1.0"
+authors = ["WEON-Junseop <inggull@naver.com>"]
+edition = "2024"
+license = ""
+repository = "https://github.com/inggull/opengl-rust-example.git"
+description = "An OpenGL Rust Example"
+
+[dependencies]
+spdlog-rs = "0.4.*"
+glfw = { version = "0.60.*", features = ["static-link"] }
+glad = { path = "../glad" }
+image = "0.25.*"
+nalgebra-glm = "0.20.*"
