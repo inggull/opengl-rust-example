@@ -10,4 +10,5 @@ members = [
     "07_texture",
     "08_transform",
     "09_camera",
+    "10_interactive_camera",
 ]
