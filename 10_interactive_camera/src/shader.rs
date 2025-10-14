@@ -1,5 +1,4 @@
-use crate::{errors, common};
-use glad::gl;
+use super::{errors, common};
 
 pub struct Shader {
     shader: u32,

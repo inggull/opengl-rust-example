@@ -8,8 +8,8 @@ repository = "https://github.com/inggull/opengl-rust-example.git"
 description = "An OpenGL Rust Example"
 
 [dependencies]
-spdlog-rs = "0.4.*"
-glfw = { version = "0.60.*", features = ["static-link"] }
-glad = { path = "../glad" }
+spdlog-rs = "0.5.*"
+glfw = "0.59.*"
+gl = "0.14.*"
 image = "0.25.*"
 nalgebra-glm = "0.20.*"

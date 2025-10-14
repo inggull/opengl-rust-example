@@ -1,5 +1,4 @@
 use super::image;
-use glad::gl;
 
 pub struct Texture {
     texture: u32,

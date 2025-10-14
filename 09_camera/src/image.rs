@@ -1,6 +1,5 @@
-use image::EncodableLayout;
-
 use super::errors;
+use image::EncodableLayout;
 
 pub struct Image {
     width: u32,

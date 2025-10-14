@@ -10,7 +10,7 @@ mod image;
 
 use glfw::Context;
 
-const WINDOW_NAME: &'static str = "Interactive Camera";
+const WINDOW_NAME: &'static str = "ImGui";
 const WINDOW_WIDTH: u32 = 640;
 const WINDOW_HEIGHT: u32 = 480;
 
@@ -50,17 +50,14 @@ fn inner_main() -> Result<(), errors::Error> {
         gl::Viewport(0, 0, WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32); // State-setting function
     }
 
-    unsafe {
-        let gl_version = gl::GetString(gl::VERSION);
-        spdlog::info!("Loaded OpenGL {}", common::c_str_to_string(gl_version.cast()).unwrap_or(String::from("Unknown")));
-        gl::Viewport(0, 0, WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32); // State-setting function
-    }
+    let mut imgui_context = imgui::Context::create();
+    let mut imgui_glfw = imgui_glfw_rs::ImguiGLFW::new(&mut imgui_context, &mut window);
+    imgui_context.set_ini_filename(None); // Disable saving imgui.ini
 
     let mut context = context::Context::create()?;
 
     // Start main loop
     spdlog::info!("Start main loop");
-    let mut counter = 0;
     let mut current_time;
     let mut last_time= 0f32;
     let mut delta_time;
@@ -68,13 +65,21 @@ fn inner_main() -> Result<(), errors::Error> {
         current_time = glfw.get_time() as f32;
         delta_time = current_time - last_time;
         last_time = current_time;
+
+        let ui = imgui_glfw.frame(&mut window, &mut imgui_context);
+
+        context.process_input(&window, delta_time);
+        context.render(current_time);
+
+        let _ = ui.window("Hello, ImGui!").size([300.0, 100.0], imgui::Condition::FirstUseEver).begin();
+        imgui_glfw.draw(&mut imgui_context, &mut window);
+
+        window.swap_buffers();
+        // std::thread::sleep(std::time::Duration::from_millis(1));
+
         glfw.poll_events();
-        if counter > 60 {
-            counter = 0;
-        } else {
-            counter += 1;
-        }
         for (_, event) in glfw::flush_messages(&events) {
+            imgui_glfw.handle_event(&mut imgui_context, &event);
             match event {
                 glfw::WindowEvent::FramebufferSize(width, height) => { 
                     context.reshape(width as u32, height as u32);
@@ -92,10 +97,6 @@ fn inner_main() -> Result<(), errors::Error> {
                 _ => {},
             }
         }
-        context.process_input(&window, delta_time);
-        context.render(current_time);
-        window.swap_buffers();
-        // std::thread::sleep(std::time::Duration::from_millis(1));
     }
 
     Ok(())

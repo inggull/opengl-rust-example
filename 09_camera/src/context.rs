@@ -1,5 +1,4 @@
 use super::{errors, shader, program, vertex_array, buffer, texture, image};
-use glad::gl;
 use nalgebra_glm as glm;
 
 pub struct Context {

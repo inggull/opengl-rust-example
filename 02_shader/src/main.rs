@@ -3,7 +3,6 @@ mod common;
 mod shader;
 
 use glfw::Context;
-use glad::gl;
 
 const WINDOW_NAME: &'static str = "Shader";
 const WINDOW_WIDTH: u32 = 640;
@@ -29,15 +28,16 @@ fn inner_main() -> Result<(), errors::Error> {
 
     // Initialize glad
     spdlog::info!("Initialize glad");
-    gl::load(|procname| {
-        match window.get_proc_address(procname) {
-            Some(f) => f as *const _,
-            None => {
-                spdlog::error!("Failed to initialize glad");
-                panic!();
-            }
+    gl::load_with(|s| window.get_proc_address(s) as *const _);
+    unsafe {
+        let gl_version = common::c_str_to_string(gl::GetString(gl::VERSION).cast());
+        if gl_version.is_none() {
+            spdlog::error!("Failed to initialize glad");
+            panic!();
         }
-    });
+        spdlog::info!("Loaded OpenGL {}", gl_version.unwrap());
+        gl::Viewport(0, 0, WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32); // State-setting function
+    }
 
     unsafe {
         let gl_version = gl::GetString(gl::VERSION);

@@ -1,5 +1,4 @@
 use super::{errors, common, shader};
-use glad::gl;
 
 pub struct Program {
     program: u32,

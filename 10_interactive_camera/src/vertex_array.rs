@@ -1,5 +1,3 @@
-use glad::gl;
-
 pub struct VertexArray {
     vertex_array: u32,
 }

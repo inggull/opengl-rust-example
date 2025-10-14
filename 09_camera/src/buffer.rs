@@ -1,5 +1,3 @@
-use glad::gl;
-
 pub struct Buffer {
     buffer: u32,
     type_: u32,

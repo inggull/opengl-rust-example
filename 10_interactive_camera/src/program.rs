@@ -1,5 +1,4 @@
 use super::{errors, common, shader};
-use glad::gl;
 use nalgebra_glm as glm;
 
 pub struct Program {

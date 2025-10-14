@@ -1,5 +1,4 @@
 use super::{errors, shader, program, vertex_array, buffer, texture, image};
-use glad::gl;
 
 pub struct Context {
     program: program::Program,
