@@ -31,10 +31,9 @@ fn inner_main() -> Result<(), errors::Error> {
     spdlog::info!("Create glfw window");
     let (mut window, events) = glfw.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_NAME, glfw::WindowMode::Windowed).ok_or(errors::Error::CreateWindowError)?;
     window.set_cursor_pos(WINDOW_WIDTH as f64 / 2.0, WINDOW_HEIGHT as f64 / 2.0);
-    window.set_key_polling(true); // window.set_key_callback(on_key_event);
-    window.set_framebuffer_size_polling(true); // window.set_framebuffer_size_callback(on_frame_buffer_size_event);
-    window.set_cursor_pos_polling(true);
-    window.set_mouse_button_polling(true);
+    // window.set_key_callback(on_key_event);
+    // window.set_framebuffer_size_callback(on_frame_buffer_size_event);
+    window.set_all_polling(true);
     window.make_current();
 
     // Initialize glad
@@ -51,8 +50,14 @@ fn inner_main() -> Result<(), errors::Error> {
     }
 
     let mut imgui_context = imgui::Context::create();
-    let mut imgui_glfw = imgui_glfw_rs::ImguiGLFW::new(&mut imgui_context, &mut window);
+    imgui_context.fonts().add_font(&[imgui::FontSource::DefaultFontData { config: None }]);
+    if !imgui_context.fonts().is_built() {
+        spdlog::info!("No fonts build");
+    } else {
+        spdlog::info!("Fonts build");
+    }
     imgui_context.set_ini_filename(None); // Disable saving imgui.ini
+    let mut imgui_glfw = imgui_glfw_rs::ImguiGLFW::new(&mut imgui_context, &mut window);
 
     let mut context = context::Context::create()?;
 
@@ -66,20 +71,8 @@ fn inner_main() -> Result<(), errors::Error> {
         delta_time = current_time - last_time;
         last_time = current_time;
 
-        let ui = imgui_glfw.frame(&mut window, &mut imgui_context);
-
-        context.process_input(&window, delta_time);
-        context.render(current_time);
-
-        let _ = ui.window("Hello, ImGui!").size([300.0, 100.0], imgui::Condition::FirstUseEver).begin();
-        imgui_glfw.draw(&mut imgui_context, &mut window);
-
-        window.swap_buffers();
-        // std::thread::sleep(std::time::Duration::from_millis(1));
-
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
-            imgui_glfw.handle_event(&mut imgui_context, &event);
             match event {
                 glfw::WindowEvent::FramebufferSize(width, height) => { 
                     context.reshape(width as u32, height as u32);
@@ -96,7 +89,18 @@ fn inner_main() -> Result<(), errors::Error> {
                 }
                 _ => {},
             }
+            imgui_glfw.handle_event(&mut imgui_context, &event);
         }
+
+        let ui = imgui_glfw.frame(&mut window, &mut imgui_context);
+
+        context.process_input(&window, delta_time);
+        context.render(current_time, ui);
+
+        imgui_glfw.draw(&mut imgui_context, &mut window);
+
+        window.swap_buffers();
+        // std::thread::sleep(std::time::Duration::from_millis(1));
     }
 
     Ok(())

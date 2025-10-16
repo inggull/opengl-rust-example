@@ -31,7 +31,7 @@ impl Context {
         ];
 
         unsafe {
-            gl::ClearColor(0.2, 0.2, 0.2, 1.0);  // State-setting function
+            gl::ClearColor(0.2, 0.2, 0.2, 1.0); // State-setting function
         }
 
         // 사용할 vao를 먼저 바인딩 해줘야 나머지 오르젝트들이 vao에 저장된다
