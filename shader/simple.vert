@@ -9,4 +9,4 @@ void main() {
 // 기본 타입: int, float, double, uint, bool
 // N: 2 ~ 4,
 // 벡터 타입: ivecN, vecN, dvecN, uvecN, bvecN
-// 행렬 타입: imetN, metN, dmetN, umetN, bmetN
+// 행렬 타입: imatN, matN, dmatN, umatN, bmatN
