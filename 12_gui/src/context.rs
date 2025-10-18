@@ -4,7 +4,7 @@ use nalgebra_glm as glm;
 pub struct Context {
     width: u32,
     height: u32,
-    clear_color: mint::Vector4<f32>,
+    clear_color: glm::Vec4,
     program: program::Program,
     vao: vertex_array::VertexArray,
     vbo: buffer::Buffer,
@@ -32,6 +32,7 @@ impl Context {
 
         let program = program::Program::create(vec![&vertex_shader, &fragment_shader])?;
         spdlog::info!("Created program({})", program.get());
+        program.use_();  // 사용할 프로그램을 지정
 
         let vertices: [f32; 192] = [
             0.5, 0.5, -0.5, 0.0, 0.0, 1.0, 1.0, 1.0,
@@ -84,7 +85,7 @@ impl Context {
             22, 23, 20,
         ];
 
-        let clear_color = mint::Vector4::from([0.2, 0.2, 0.2, 1.0]);
+        let clear_color = glm::vec4(0.2, 0.2, 0.2, 1.0);
         unsafe {
             gl::ClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w); // State-setting function
         }
@@ -117,13 +118,8 @@ impl Context {
             gl::ActiveTexture(gl::TEXTURE1); // 1번 텍스쳐를 활성화
             tbo2.bind(); // 사용할 tbo를 지정
 
-            program.use_();  // 사용할 프로그램을 지정
             program.set_uniform1i("texture0\0", 0); // 프로그램의 전역 변수 `texture0`에 0을 할당
             program.set_uniform1i("texture1\0", 1); // 프로그램의 전역 변수 `texture1`에 1을 할당
-
-            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-            gl::Enable(gl::BLEND);
-            gl::Enable(gl::DEPTH_TEST);
         }
 
         let cube_positions = vec![
@@ -169,36 +165,8 @@ impl Context {
         Ok(Context { width, height, clear_color, program, vao, vbo, ebo, tbo1, tbo2, cube_positions, camera_position, camera_front, camera_right, camera_pitch, camera_yaw, camera_fov, previous_mouse_position, mouse_position, camera_control })
     }
 
-    pub fn render(&mut self, time: f32, ui: &mut imgui::Ui) {
-        ui.window("Hello, ImGui!").size([400.0, 200.0], imgui::Condition::FirstUseEver).build(|| {
-            if ui.color_edit4("clear color", &mut self.clear_color) {
-                unsafe {
-                    gl::ClearColor(self.clear_color.x, self.clear_color.y, self.clear_color.z, self.clear_color.w);
-                }
-            }
-            ui.separator();
-            let mut camera_position = mint::Vector3::from_slice(self.camera_position.as_slice());
-            if ui.input_float3("camera position", &mut camera_position).build() {
-                self.camera_position.x = camera_position.x;
-                self.camera_position.y = camera_position.y;
-                self.camera_position.z = camera_position.z;
-            };
-            ui.slider("camera pitch", -89f32, 89f32, &mut self.camera_pitch);
-            ui.slider("camera yaw", -360f32, 360f32, &mut self.camera_yaw);
-            if ui.input_int("camera fov", &mut self.camera_fov).build() {}
-            if ui.button("reset camera") {
-                self.camera_position.x = 0.0;
-                self.camera_position.y = 0.0;
-                self.camera_position.z = 4.0;
-                self.camera_pitch = 0.0;
-                self.camera_yaw = 0.0;
-                self.camera_fov = 45;
-            }
-        });
-
+    pub fn render(&mut self, time: f32) {
         unsafe {
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT); // State-using function
-            self.program.use_(); // 사용할 프로그램을 지정
             self.camera_front = (glm::rotate(&glm::Mat4::identity(), self.camera_yaw.to_radians(), &glm::vec3(0.0, 1.0, 0.0)) * glm::rotate(&glm::Mat4::identity(), self.camera_pitch.to_radians(), &glm::vec3(1.0, 0.0, 0.0)) * glm::vec4(0.0, 0.0, -1.0, 0.0)).xyz();
             self.camera_right = glm::normalize(&glm::cross(&glm::vec3(0.0, 1.0, 0.0), &-self.camera_front));
             let view = glm::look_at(&self.camera_position, &(&self.camera_position + &self.camera_front), &glm::vec3(0.0, 1.0, 0.0));
@@ -208,8 +176,10 @@ impl Context {
                 let position = cube_position;
                 let mut model = glm::translate(&glm::Mat4::identity(), position);
                 model = glm::rotate(&model, (time * 90.0).to_radians() + 10.0 * index as f32, &glm::vec3(1.0, 0.3 , 0.5));
-                let transform = glm::Mat4::identity() * projection * view * model;
+                let transform = projection * view * model;
+                self.program.use_(); // 사용할 프로그램을 지정
                 self.program.set_uniform_matrix4fv("transform\0", &transform);
+                self.vao.bind(); // 사용할 vao를 지정
                 gl::DrawElements(gl::TRIANGLES, 36, gl::UNSIGNED_INT, std::ptr::null());
             }
         }
@@ -239,14 +209,13 @@ impl Context {
         }
     }
 
-    pub fn reshape(&mut self, width: u32, height: u32) {
-        self.width = width;
-        self.height = height;
+    pub fn reshape(&mut self, width: i32, height: i32) {
+        self.width = width as u32;
+        self.height = height as u32;
     }
 
-    pub fn mouse_move(&mut self, x: f64, y: f64) {
-        self.mouse_position = glm::vec2(x as f32, y as f32);
-
+    pub fn mouse_move(&mut self, x: f32, y: f32) {
+        self.mouse_position = glm::vec2(x, y);
         if self.camera_control == false {
             return;
         }
@@ -272,15 +241,8 @@ impl Context {
         self.previous_mouse_position = self.mouse_position;
     }
 
-    pub fn mouse_button(&mut self, mouse_button: glfw::MouseButton, action: glfw::Action) {
-        if mouse_button == glfw::MouseButtonRight {
-            match action {
-                glfw::Action::Release => self.camera_control = false,
-                _ => {
-                    self.previous_mouse_position = self.mouse_position;
-                    self.camera_control = true;
-                }
-            }
-        }
+    pub fn set_mouse_press(&mut self, mouse_press: bool) {
+        self.camera_control = mouse_press;
+        self.previous_mouse_position = self.mouse_position;
     }
 }
