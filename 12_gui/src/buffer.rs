@@ -18,6 +18,14 @@ impl Buffer {
         Buffer { buffer, type_, usage }
     }
 
+    pub fn set(&self, type_: u32, data_size: isize, data: *const std::ffi::c_void, usage: u32) {
+        unsafe {
+            gl::BindBuffer(type_, self.buffer);
+            gl::BufferData(type_, data_size, data, usage);
+        }
+        
+    }
+
     pub fn get(&self) -> u32 {
         self.buffer
     }

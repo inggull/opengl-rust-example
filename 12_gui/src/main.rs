@@ -11,8 +11,6 @@ mod ui;
 
 use glfw::Context;
 
-use crate::ui::{UiManager, Window};
-
 const WINDOW_NAME: &'static str = "Gui";
 const WINDOW_WIDTH: u32 = 640;
 const WINDOW_HEIGHT: u32 = 480;
@@ -52,53 +50,63 @@ fn inner_main() -> Result<(), errors::Error> {
         gl::Viewport(0, 0, WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32); // State-setting function
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
         gl::Enable(gl::BLEND);
-        gl::Enable(gl::DEPTH_TEST);
     }
 
     let mut context = context::Context::create()?;
 
-    let mut ui_manager = UiManager::create();
-    ui_manager.add_window(WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32)?;
-    ui_manager.add_button(WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32)?;
-    ui_manager.set_button_pos(1, 200.0, 100.0);
-    ui_manager.set_button_size(1, 100, 25);
+    let mut ui_manager = ui::UiManager::create();
+    ui_manager.push_window(WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32)?;
+    ui_manager.window[0].set_color(255, 0, 0, 255);
+    ui_manager.push_window(WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32)?;
+    ui_manager.window[1].set_pos(100.0, 100.0);
+    ui_manager.window[1].set_color(0, 255, 0, 255);
+    ui_manager.push_window(WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32)?;
+    ui_manager.window[2].set_pos(200.0, 200.0);
+    ui_manager.window[2].set_color(0, 0, 255, 255);
 
     // Start main loop
     spdlog::info!("Start main loop");
-    let mut current_time;
-    let mut last_time: f32 = 0.0;
+    let mut time;
+    let mut prev_time: f32 = 0.0;
     let mut delta_time;
     while !window.should_close() {
-        current_time = glfw.get_time() as f32;
-        delta_time = current_time - last_time;
-        last_time = current_time;
+        time = glfw.get_time() as f32;
+        delta_time = time - prev_time;
+        prev_time = time;
 
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
             match event {
                 glfw::WindowEvent::FramebufferSize(width, height) => {
-                    ui_manager.reshape(width, height);
-                    context.reshape(width, height);
+                    ui_manager.on_frame_buffer_size_event(width, height);
+                    context.on_frame_buffer_size_event(width, height);
                     on_frame_buffer_size_event(&mut window, width, height);
                 }
-                glfw::WindowEvent::Key(key, scancode, action, modifiers) => on_key_event(&mut window, key, scancode, action, modifiers),
+                glfw::WindowEvent::Key(key, scancode, action, modifiers) => {
+                    if action == glfw::Action::Release {
+                        context.on_key_event(key, false);
+                    } else {
+                        context.on_key_event(key, true);
+                    }
+                    on_key_event(&mut window, key, scancode, action, modifiers);
+                }
                 glfw::WindowEvent::CursorPos(x, y) => {
-                    ui_manager.set_mouse_pos(x as f32, y as f32);
-                    context.mouse_move(x as f32, y as f32);
+                    ui_manager.on_cursur_pos_event(x as f32, y as f32);
+                    context.on_cursur_pos_event(x as f32, y as f32);
                     on_cursur_pos_event(&mut window, x, y);
                 }
                 glfw::WindowEvent::MouseButton(mouse_button, action, modifiers) => {
                     if mouse_button == glfw::MouseButtonLeft {
                         if action == glfw::Action::Release {
-                            ui_manager.set_mouse_press(false);
+                            ui_manager.on_mouse_down_event(false);
                         } else {
-                            ui_manager.set_mouse_press(true);
+                            ui_manager.on_mouse_down_event(true);
                         }
                     } else if mouse_button == glfw::MouseButtonRight {
                         if action == glfw::Action::Release {
-                            context.set_mouse_press(false);
+                            context.on_mouse_down_event(false);
                         } else {
-                            context.set_mouse_press(true);
+                            context.on_mouse_down_event(true);
                         }
                     }
                     on_mouse_button_event(&mut window, mouse_button, action, modifiers);
@@ -111,8 +119,7 @@ fn inner_main() -> Result<(), errors::Error> {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT); // State-using function
         }
 
-        context.process_input(&window, delta_time);
-        context.render(current_time);
+        context.render(time, delta_time);
         ui_manager.render();
 
         window.swap_buffers();

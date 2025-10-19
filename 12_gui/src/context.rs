@@ -21,6 +21,7 @@ pub struct Context {
     previous_mouse_position: glm::Vec2,
     mouse_position: glm::Vec2,
     camera_control: bool,
+    key_down: [bool; 6],
 }
 
 impl Context {
@@ -162,11 +163,35 @@ impl Context {
 
         let camera_control = false;
 
-        Ok(Context { width, height, clear_color, program, vao, vbo, ebo, tbo1, tbo2, cube_positions, camera_position, camera_front, camera_right, camera_pitch, camera_yaw, camera_fov, previous_mouse_position, mouse_position, camera_control })
+        // 키보드 정보
+        let key_down = [false; 6];
+
+        Ok(Context { width, height, clear_color, program, vao, vbo, ebo, tbo1, tbo2, cube_positions, camera_position, camera_front, camera_right, camera_pitch, camera_yaw, camera_fov, previous_mouse_position, mouse_position, camera_control, key_down })
     }
 
-    pub fn render(&mut self, time: f32) {
+    pub fn render(&mut self, time: f32, delta_time: f32) {
+        // 카메라 이동
+        let camera_speed = delta_time * 2.5;
+        if self.key_down[0] { // W
+            self.camera_position += camera_speed * &self.camera_front;
+        }
+        if self.key_down[1] { // A
+            self.camera_position -= camera_speed * &self.camera_right;
+        }
+        if self.key_down[2] { // S
+            self.camera_position -= camera_speed * &self.camera_front;
+        }
+        if self.key_down[3] { // D
+            self.camera_position += camera_speed * &self.camera_right;
+        }
+        if self.key_down[4] { // Space
+            self.camera_position += camera_speed * &glm::vec3(0.0, 1.0, 0.0);
+        }
+        if self.key_down[5] { // LeftShift
+            self.camera_position -= camera_speed * &glm::vec3(0.0, 1.0, 0.0);
+        }
         unsafe {
+            gl::Enable(gl::DEPTH_TEST);
             self.camera_front = (glm::rotate(&glm::Mat4::identity(), self.camera_yaw.to_radians(), &glm::vec3(0.0, 1.0, 0.0)) * glm::rotate(&glm::Mat4::identity(), self.camera_pitch.to_radians(), &glm::vec3(1.0, 0.0, 0.0)) * glm::vec4(0.0, 0.0, -1.0, 0.0)).xyz();
             self.camera_right = glm::normalize(&glm::cross(&glm::vec3(0.0, 1.0, 0.0), &-self.camera_front));
             let view = glm::look_at(&self.camera_position, &(&self.camera_position + &self.camera_front), &glm::vec3(0.0, 1.0, 0.0));
@@ -185,43 +210,31 @@ impl Context {
         }
     }
 
-    pub fn process_input(&mut self, window: &glfw::PWindow, delta_time: f32) {
-        let camera_speed = delta_time * 2.5;
-        if window.get_key(glfw::Key::W) == glfw::Action::Press {
-            self.camera_position += camera_speed * &self.camera_front;
-        }
-        if window.get_key(glfw::Key::S) == glfw::Action::Press {
-            self.camera_position -= camera_speed * &self.camera_front;
-        }
-
-        if window.get_key(glfw::Key::D) == glfw::Action::Press {
-            self.camera_position += camera_speed * &self.camera_right;
-        }
-        if window.get_key(glfw::Key::A) == glfw::Action::Press {
-            self.camera_position -= camera_speed * &self.camera_right;
-        }
-
-        if window.get_key(glfw::Key::Space) == glfw::Action::Press {
-            self.camera_position += camera_speed * &glm::vec3(0.0, 1.0, 0.0);
-        }
-        if window.get_key(glfw::Key::LeftShift) == glfw::Action::Press {
-            self.camera_position -= camera_speed * &glm::vec3(0.0, 1.0, 0.0);
+    pub fn on_key_event(&mut self, key: glfw::Key, down: bool) {
+        match key {
+            glfw::Key::W => self.key_down[0] = down,
+            glfw::Key::A => self.key_down[1] = down,
+            glfw::Key::S => self.key_down[2] = down,
+            glfw::Key::D => self.key_down[3] = down,
+            glfw::Key::Space => self.key_down[4] = down,
+            glfw::Key::LeftShift => self.key_down[5] = down,
+            _ => {},
         }
     }
 
-    pub fn reshape(&mut self, width: i32, height: i32) {
+    pub fn on_frame_buffer_size_event(&mut self, width: i32, height: i32) {
         self.width = width as u32;
         self.height = height as u32;
     }
 
-    pub fn mouse_move(&mut self, x: f32, y: f32) {
+    pub fn on_cursur_pos_event(&mut self, x: f32, y: f32) {
         self.mouse_position = glm::vec2(x, y);
         if self.camera_control == false {
             return;
         }
 
         let delta_position = self.mouse_position - self.previous_mouse_position;
-
+        
         let sensitivity = 0.15f32;
         self.camera_yaw -= delta_position.x * sensitivity;
         self.camera_pitch -= delta_position.y * sensitivity;
@@ -241,7 +254,7 @@ impl Context {
         self.previous_mouse_position = self.mouse_position;
     }
 
-    pub fn set_mouse_press(&mut self, mouse_press: bool) {
+    pub fn on_mouse_down_event(&mut self, mouse_press: bool) {
         self.camera_control = mouse_press;
         self.previous_mouse_position = self.mouse_position;
     }
