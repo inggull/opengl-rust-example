@@ -227,7 +227,7 @@ impl Context {
         self.height = height as u32;
     }
 
-    pub fn on_cursur_pos_event(&mut self, x: f32, y: f32) {
+    pub fn on_cursor_pos_event(&mut self, x: f32, y: f32) {
         self.mouse_position = glm::vec2(x, y);
         if self.camera_control == false {
             return;

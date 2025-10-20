@@ -54,15 +54,13 @@ fn inner_main() -> Result<(), errors::Error> {
 
     let mut context = context::Context::create()?;
 
-    let mut ui_manager = ui::UiManager::create();
-    ui_manager.push_window(WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32)?;
-    ui_manager.window[0].set_color(255, 0, 0, 255);
-    ui_manager.push_window(WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32)?;
-    ui_manager.window[1].set_pos(100.0, 100.0);
-    ui_manager.window[1].set_color(0, 255, 0, 255);
-    ui_manager.push_window(WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32)?;
-    ui_manager.window[2].set_pos(200.0, 200.0);
-    ui_manager.window[2].set_color(0, 0, 255, 255);
+    let mut ui_manager = ui::UiManager::create(WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32);
+    let width = WINDOW_WIDTH as i32 / 2;
+    let height = WINDOW_HEIGHT as i32 / 2;
+    ui_manager.push_window(1, width, height)?.set_frame_color(0,192,255, 230).set_color(32, 32, 32, 255);
+    ui_manager.push_window(2, width, height)?.set_pos(100.0, 100.0).set_frame_color(32,128,255, 230).set_color(32, 32, 32, 255);
+    ui_manager.push_window(3, width, height)?.set_pos(200.0, 200.0).set_frame_color(128,214,255, 230).set_color(32, 32, 32, 255);
+
 
     // Start main loop
     spdlog::info!("Start main loop");
@@ -78,6 +76,9 @@ fn inner_main() -> Result<(), errors::Error> {
         for (_, event) in glfw::flush_messages(&events) {
             match event {
                 glfw::WindowEvent::FramebufferSize(width, height) => {
+                    unsafe {
+                        gl::Viewport(0, 0, width, height);
+                    }
                     ui_manager.on_frame_buffer_size_event(width, height);
                     context.on_frame_buffer_size_event(width, height);
                     on_frame_buffer_size_event(&mut window, width, height);
@@ -91,9 +92,9 @@ fn inner_main() -> Result<(), errors::Error> {
                     on_key_event(&mut window, key, scancode, action, modifiers);
                 }
                 glfw::WindowEvent::CursorPos(x, y) => {
-                    ui_manager.on_cursur_pos_event(x as f32, y as f32);
-                    context.on_cursur_pos_event(x as f32, y as f32);
-                    on_cursur_pos_event(&mut window, x, y);
+                    ui_manager.on_cursor_pos_event(x as f32, y as f32);
+                    context.on_cursor_pos_event(x as f32, y as f32);
+                    on_cursor_pos_event(&mut window, x, y);
                 }
                 glfw::WindowEvent::MouseButton(mouse_button, action, modifiers) => {
                     if mouse_button == glfw::MouseButtonLeft {
@@ -131,9 +132,6 @@ fn inner_main() -> Result<(), errors::Error> {
 
 fn on_frame_buffer_size_event(_: &mut glfw::Window, width: i32, height: i32) {
     spdlog::info!("FramebufferSize changed: {} x {}", width, height);
-    unsafe {
-        gl::Viewport(0, 0, width, height);
-    }
 }
 
 fn on_key_event(window: &mut glfw::Window, key: glfw::Key, scancode: glfw::Scancode, action: glfw::Action, modifiers: glfw::Modifiers) {
@@ -154,7 +152,7 @@ fn on_key_event(window: &mut glfw::Window, key: glfw::Key, scancode: glfw::Scanc
     }
 }
 
-fn on_cursur_pos_event(_: &mut glfw::Window, x: f64, y: f64) {
+fn on_cursor_pos_event(_: &mut glfw::Window, x: f64, y: f64) {
     spdlog::info!("CursurPosition changed: {} x {}", x, y);
 }
 
