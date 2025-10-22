@@ -54,13 +54,78 @@ fn inner_main() -> Result<(), errors::Error> {
 
     let mut context = context::Context::create()?;
 
-    let mut ui_manager = ui::UiManager::create(WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32);
-    let width = WINDOW_WIDTH as i32 / 2;
-    let height = WINDOW_HEIGHT as i32 / 2;
-    ui_manager.push_window(1, width, height)?.set_frame_color(0,192,255, 230).set_color(32, 32, 32, 255);
-    ui_manager.push_window(2, width, height)?.set_pos(100.0, 100.0).set_frame_color(32,128,255, 230).set_color(32, 32, 32, 255);
-    ui_manager.push_window(3, width, height)?.set_pos(200.0, 200.0).set_frame_color(128,214,255, 230).set_color(32, 32, 32, 255);
+    let close = image::Image::load("resources/images/close.png")?;
+    spdlog::info!("Loaded image file \"resources/images/close.png\" ({} x {}, {} channels)", close.get_width(), close.get_height(), close.get_channel_count());
+    let maximize = image::Image::load("resources/images/maximize.png")?;
+    spdlog::info!("Loaded image file \"resources/images/maximize.png\" ({} x {}, {} channels)", maximize.get_width(), maximize.get_height(), maximize.get_channel_count());
+    let minimize = image::Image::load("resources/images/minimize.png")?;
+    spdlog::info!("Loaded image file \"resources/images/minimize.png\" ({} x {}, {} channels)", minimize.get_width(), minimize.get_height(), minimize.get_channel_count());
 
+    let mut ui_manager = ui::Manager::create(WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32);
+
+    let window_1 = ui::window::Window::create(1, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let window_2 = ui::window::Window::create(2, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let window_3 = ui::window::Window::create(3, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+
+    ui_manager.push_window(window_1).push_window(window_2).push_window(window_3);
+
+    ui_manager.windows[0].set_pos(0.0, 0.0).set_frame_color(128,224,255, 224).set_color(32, 32, 32, 255);
+    ui_manager.windows[1].set_pos(100.0, 100.0).set_frame_color(0,192,255, 224).set_color(32, 32, 32, 255);
+    ui_manager.windows[2].set_pos(200.0, 200.0).set_frame_color(32,128,255, 224).set_color(32, 32, 32, 255);
+
+    let button_1 = ui::object::Object::create(1, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let button_2 = ui::object::Object::create(2, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let button_3 = ui::object::Object::create(3, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+
+    ui_manager.windows[0].push_object(button_1).push_object(button_2).push_object(button_3);
+
+    let window_1_size_x = ui_manager.windows[0].get_size().x;
+    ui_manager.windows[0].objects[0].set_loacl_pos(window_1_size_x + 6.0 - 48.0, 0.0).set_size(48.0, 24.0).set_color(192, 64, 64, 255);
+    ui_manager.windows[0].objects[1].set_loacl_pos(window_1_size_x + 6.0 - 48.0 - 24.0, 0.0).set_size(24.0, 24.0).set_color(255, 255, 255, 0);
+    ui_manager.windows[0].objects[2].set_loacl_pos(window_1_size_x + 6.0 - 48.0 - 24.0 - 24.0, 0.0).set_size(24.0, 24.0).set_color(255, 255, 255, 0);
+
+    let texture_1 = ui::object::Object::create(4, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let texture_2 = ui::object::Object::create(5, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let texture_3 = ui::object::Object::create(6, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+
+    ui_manager.windows[0].objects[0].push_object(texture_1);
+    ui_manager.windows[0].objects[1].push_object(texture_2);
+    ui_manager.windows[0].objects[2].push_object(texture_3);
+
+    ui_manager.windows[0].objects[0].objects[0].enable_texture().set_texture(&close).set_size(16.0, 16.0).set_loacl_pos(16.0, 4.0).set_color(255, 255, 255, 255);
+    // ui_manager.windows[0].objects[0].objects[0].disable_texture();
+    ui_manager.windows[0].objects[1].objects[0].enable_texture().set_texture(&maximize).set_size(16.0, 16.0).set_loacl_pos(4.0, 4.0).set_color(0, 0, 0, 255);
+    ui_manager.windows[0].objects[2].objects[0].enable_texture().set_texture(&minimize).set_size(16.0, 16.0).set_loacl_pos(4.0, 4.0).set_color(0, 0, 0, 255);
+
+    ui_manager.windows[0].objects[0].set_mouse_on_event(|button| {
+        button.set_color(208, 32, 32, 255);
+    }).set_mouse_off_event(|button| {
+        button.set_color(192, 64, 64, 255);
+    }).set_mouse_down_event(|button| {
+        button.set_color(176, 32, 32, 255);
+    }).set_mouse_up_event(|button| {
+        button.set_color(208, 32, 32, 255);
+    });
+
+    ui_manager.windows[0].objects[1].set_mouse_on_event(|button| {
+        button.set_color(255, 255, 255, 64);
+    }).set_mouse_off_event(|button| {
+        button.set_color(0, 0, 0, 0);
+    }).set_mouse_down_event(|button| {
+        button.set_color(0, 0, 0, 64);
+    }).set_mouse_up_event(|button| {
+        button.set_color(255, 255, 255, 64);
+    });
+
+    ui_manager.windows[0].objects[2].set_mouse_on_event(|button| {
+        button.set_color(255, 255, 255, 64);
+    }).set_mouse_off_event(|button| {
+        button.set_color(0, 0, 0, 0);
+    }).set_mouse_down_event(|button| {
+        button.set_color(0, 0, 0, 64);
+    }).set_mouse_up_event(|button| {
+        button.set_color(255, 255, 255, 64);
+    });
 
     // Start main loop
     spdlog::info!("Start main loop");
@@ -79,7 +144,7 @@ fn inner_main() -> Result<(), errors::Error> {
                     unsafe {
                         gl::Viewport(0, 0, width, height);
                     }
-                    ui_manager.on_frame_buffer_size_event(width, height);
+                    ui_manager.on_frame_buffer_size_event(width as f32, height as f32);
                     context.on_frame_buffer_size_event(width, height);
                     on_frame_buffer_size_event(&mut window, width, height);
                 }

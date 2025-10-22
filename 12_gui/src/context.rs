@@ -110,18 +110,13 @@ impl Context {
         let container = image::Image::load("resources/images/container.jpg")?;
         spdlog::info!("Loaded image file \"resources/images/container.jpg\" ({} x {}, {} channels)", container.get_width(), container.get_height(), container.get_channel_count());
 
-        let tbo1 = texture::Texture::create(&awesomeface);
-        let tbo2 = texture::Texture::create(&container);
+        let tbo1 = texture::Texture::create();
+        tbo1.set_texture(&awesomeface);
+        let tbo2 = texture::Texture::create();
+        tbo2.set_texture(&container);
 
-        unsafe {
-            gl::ActiveTexture(gl::TEXTURE0); // 0번 텍스쳐를 활성화
-            tbo1.bind(); // 사용할 tbo를 지정
-            gl::ActiveTexture(gl::TEXTURE1); // 1번 텍스쳐를 활성화
-            tbo2.bind(); // 사용할 tbo를 지정
-
-            program.set_uniform1i("texture0\0", 0); // 프로그램의 전역 변수 `texture0`에 0을 할당
-            program.set_uniform1i("texture1\0", 1); // 프로그램의 전역 변수 `texture1`에 1을 할당
-        }
+        program.set_uniform1i("texture0\0", 0); // 프로그램의 전역 변수 `texture0`에 0을 할당
+        program.set_uniform1i("texture1\0", 1); // 프로그램의 전역 변수 `texture1`에 1을 할당
 
         let cube_positions = vec![
             glm::vec3::<f32>(-2.0, 0.0, -2.0),
@@ -202,6 +197,10 @@ impl Context {
                 let mut model = glm::translate(&glm::Mat4::identity(), position);
                 model = glm::rotate(&model, (time * 90.0).to_radians() + 10.0 * index as f32, &glm::vec3(1.0, 0.3 , 0.5));
                 let transform = projection * view * model;
+                gl::ActiveTexture(gl::TEXTURE0); // 0번 텍스쳐를 활성화
+                self.tbo1.bind(); // 사용할 tbo를 지정
+                gl::ActiveTexture(gl::TEXTURE1); // 1번 텍스쳐를 활성화
+                self.tbo2.bind(); // 사용할 tbo를 지정
                 self.program.use_(); // 사용할 프로그램을 지정
                 self.program.set_uniform_matrix4fv("transform\0", &transform);
                 self.vao.bind(); // 사용할 vao를 지정
