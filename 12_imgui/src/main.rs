@@ -64,67 +64,59 @@ fn inner_main() -> Result<(), errors::Error> {
 
     let mut ui_manager = Manager::create(WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32);
 
-    let window_1 = Window::create(1, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
-    let window_2 = Window::create(2, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
-    let window_3 = Window::create(3, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let window_1 = ui_manager.add_window()?;
+    let window_2 = ui_manager.add_window()?;
+    let window_3 = ui_manager.add_window()?;
 
-    ui_manager.push_window(window_1).push_window(window_2).push_window(window_3);
+    window_1.borrow_mut().set_pos(0.0, 0.0).set_frame_color(128,224,255, 224).set_color(32, 32, 32, 255);
+    window_2.borrow_mut().set_pos(100.0, 100.0).set_frame_color(0,192,255, 224).set_color(32, 32, 32, 255);
+    window_3.borrow_mut().set_pos(200.0, 200.0).set_frame_color(32,128,255, 224).set_color(32, 32, 32, 255);
 
-    ui_manager.windows[0].set_pos(0.0, 0.0).set_frame_color(128,224,255, 224).set_color(32, 32, 32, 255);
-    ui_manager.windows[1].set_pos(100.0, 100.0).set_frame_color(0,192,255, 224).set_color(32, 32, 32, 255);
-    ui_manager.windows[2].set_pos(200.0, 200.0).set_frame_color(32,128,255, 224).set_color(32, 32, 32, 255);
+    let button_1 = window_1.borrow_mut().add_object()?;
+    let button_2 = window_1.borrow_mut().add_object()?;
+    let button_3 = window_1.borrow_mut().add_object()?;
 
-    let button_1 = Object::create(1, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
-    let button_2 = Object::create(2, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
-    let button_3 = Object::create(3, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let window_1_size_x = window_1.borrow().get_size().x;
+    button_1.borrow_mut().set_loacl_pos(window_1_size_x + 6.0 - 48.0, 0.0).set_size(48.0, 24.0).set_color(192, 64, 64, 255);
+    button_2.borrow_mut().set_loacl_pos(window_1_size_x + 6.0 - 48.0 - 24.0, 0.0).set_size(24.0, 24.0).set_color(255, 255, 255, 0);
+    button_3.borrow_mut().set_loacl_pos(window_1_size_x + 6.0 - 48.0 - 24.0 - 24.0, 0.0).set_size(24.0, 24.0).set_color(255, 255, 255, 0);
 
-    ui_manager.windows[0].push_object(button_1).push_object(button_2).push_object(button_3);
+    let texture_1 = button_1.borrow_mut().add_object()?;
+    let texture_2 = button_2.borrow_mut().add_object()?;
+    let texture_3 = button_3.borrow_mut().add_object()?;
 
-    let window_1_size_x = ui_manager.windows[0].get_size().x;
-    ui_manager.windows[0].objects[0].set_loacl_pos(window_1_size_x + 6.0 - 48.0, 0.0).set_size(48.0, 24.0).set_color(192, 64, 64, 255);
-    ui_manager.windows[0].objects[1].set_loacl_pos(window_1_size_x + 6.0 - 48.0 - 24.0, 0.0).set_size(24.0, 24.0).set_color(255, 255, 255, 0);
-    ui_manager.windows[0].objects[2].set_loacl_pos(window_1_size_x + 6.0 - 48.0 - 24.0 - 24.0, 0.0).set_size(24.0, 24.0).set_color(255, 255, 255, 0);
+    texture_1.borrow_mut().set_shader_type(ShaderType::Mix).set_texture(&close).set_size(16.0, 16.0).set_loacl_pos(16.0, 4.0).set_color(255, 255, 255, 255);
+    texture_2.borrow_mut().set_shader_type(ShaderType::Texture).set_texture(&maximize).set_size(16.0, 16.0).set_loacl_pos(4.0, 4.0).set_color(0, 0, 0, 255);
+    texture_3.borrow_mut().set_shader_type(ShaderType::Texture).set_texture(&minimize).set_size(16.0, 16.0).set_loacl_pos(4.0, 4.0).set_color(0, 0, 0, 255);
 
-    let texture_1 = Object::create(4, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
-    let texture_2 = Object::create(5, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
-    let texture_3 = Object::create(6, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
-
-    ui_manager.windows[0].objects[0].push_object(texture_1);
-    ui_manager.windows[0].objects[1].push_object(texture_2);
-    ui_manager.windows[0].objects[2].push_object(texture_3);
-
-    ui_manager.windows[0].objects[0].objects[0].set_shader_type(ShaderType::Mix).set_texture(&close).set_size(16.0, 16.0).set_loacl_pos(16.0, 4.0).set_color(255, 255, 255, 255);
-    ui_manager.windows[0].objects[1].objects[0].set_shader_type(ShaderType::Texture).set_texture(&maximize).set_size(16.0, 16.0).set_loacl_pos(4.0, 4.0).set_color(0, 0, 0, 255);
-    ui_manager.windows[0].objects[2].objects[0].set_shader_type(ShaderType::Texture).set_texture(&minimize).set_size(16.0, 16.0).set_loacl_pos(4.0, 4.0).set_color(0, 0, 0, 255);
-
-    ui_manager.windows[0].objects[0].set_mouse_on_event(|button| {
-        button.set_color(208, 32, 32, 255);
-    }).set_mouse_off_event(|button| {
-        button.set_color(192, 64, 64, 255);
-    }).set_mouse_down_event(|button| {
-        button.set_color(176, 32, 32, 255);
-    }).set_mouse_up_event(|button| {
-        button.set_color(208, 32, 32, 255);
+    button_1.borrow_mut().set_mouse_on_event(|o| {
+        o.set_color(208, 32, 32, 255);
+    }).set_mouse_off_event(|o| {
+        o.set_color(192, 64, 64, 255);
+    }).set_mouse_down_event(|o| {
+        o.set_color(176, 32, 32, 255);
+    }).set_mouse_up_event(|o| {
+        o.set_color(208, 32, 32, 255);
     });
 
-    ui_manager.windows[0].objects[1].set_mouse_on_event(|button| {
-        button.set_color(255, 255, 255, 64);
-    }).set_mouse_off_event(|button| {
-        button.set_color(0, 0, 0, 0);
-    }).set_mouse_down_event(|button| {
-        button.set_color(0, 0, 0, 64);
-    }).set_mouse_up_event(|button| {
-        button.set_color(255, 255, 255, 64);
+    button_2.borrow_mut().set_mouse_on_event(|o| {
+        o.set_color(255, 255, 255, 64);
+    }).set_mouse_off_event(|o| {
+        o.set_color(255, 255, 255, 0);
+    }).set_mouse_down_event(|o| {
+        o.set_color(0, 0, 0, 64);
+    }).set_mouse_up_event(|o| {
+        o.set_color(255, 255, 255, 64);
     });
 
-    ui_manager.windows[0].objects[2].set_mouse_on_event(|button| {
-        button.set_color(255, 255, 255, 64);
-    }).set_mouse_off_event(|button| {
-        button.set_color(0, 0, 0, 0);
-    }).set_mouse_down_event(|button| {
-        button.set_color(0, 0, 0, 64);
-    }).set_mouse_up_event(|button| {
-        button.set_color(255, 255, 255, 64);
+    button_3.borrow_mut().set_mouse_on_event(|o| {
+        o.set_color(255, 255, 255, 64);
+    }).set_mouse_off_event(|o| {
+        o.set_color(255, 255, 255, 0);
+    }).set_mouse_down_event(|o| {
+        o.set_color(0, 0, 0, 64);
+    }).set_mouse_up_event(|o| {
+        o.set_color(255, 255, 255, 64);
     });
 
     // Start main loop

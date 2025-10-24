@@ -1,6 +1,7 @@
 use crate::{errors, shader::Shader, program::Program, vertex_array::VertexArray, buffer::Buffer};
 use crate::ui::object::Object;
 use nalgebra_glm as glm;
+use std::{rc::Rc, cell::RefCell};
 
 pub struct Window {
     pub(super) id: usize,
@@ -18,7 +19,8 @@ pub struct Window {
     pub(super) vao: VertexArray,
     pub(super) vbo: Buffer,
     pub(super) ebo: Buffer,
-    pub objects: Vec<Object>,
+    pub(super) total_objects: usize,
+    pub(super) objects: Vec<Rc<RefCell<Object>>>,
     pub(super) on_cursor_object: Option<usize>,
     pub(super) prev_on_cursor_object: Option<usize>,
     pub(super) cursor_pos: glm::Vec2,
@@ -26,7 +28,7 @@ pub struct Window {
 }
 
 impl Window {
-    pub fn create(id: usize, frame_buffer_size_x: f32, frame_buffer_size_y: f32) -> Result<Self, errors::Error> {
+    pub fn create(id: usize, frame_buffer_size_x: f32, frame_buffer_size_y: f32) -> Result<Rc<RefCell<Self>>, errors::Error> {
         let ratio = glm::vec2(2.0 / frame_buffer_size_x, 2.0 / frame_buffer_size_y);
         let pos = glm::vec2(0.0, 0.0);
         let size = glm::vec2(frame_buffer_size_x / 2.0, frame_buffer_size_y / 2.0);
@@ -70,19 +72,21 @@ impl Window {
         vao.set(0, 3, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 7) as i32, (size_of::<f32>() * 0) as *const _);
         vao.set(1, 4, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 7) as i32, (size_of::<f32>() * 3) as *const _);
 
-        let objects = Vec::<Object>::new();
+        let objects = Vec::new();
         let on_cursor_object = None;
         let prev_on_cursor_object = None;
         let cursor_pos = glm::vec2(0.0, 0.0);
         let prev_cursor_pos = glm::vec2(0.0, 0.0);
 
-        Ok(Self { id, moving: false, sizing: [false; 4], ratio, pos, size, color, frame_size, frame_color, vertices, indices, program, vao, vbo, ebo, objects, on_cursor_object, prev_on_cursor_object, cursor_pos, prev_cursor_pos })
+        Ok(Rc::new(RefCell::new(Self { id, moving: false, sizing: [false; 4], ratio, pos, size, color, frame_size, frame_color, vertices, indices, program, vao, vbo, ebo, total_objects: 0, objects, on_cursor_object, prev_on_cursor_object, cursor_pos, prev_cursor_pos })))
     }
 
-    pub fn push_object(&mut self, mut object: Object) -> &mut Self {
-        object.set_base_pos(self.pos.x, self.pos.y);
-        self.objects.push(object);
-        self
+    pub fn add_object(&mut self) -> Result<Rc::<RefCell::<Object>>, errors::Error> {
+        self.total_objects += 1;
+        let object = Object::create(self.total_objects, self.ratio)?;
+        object.borrow_mut().set_base_pos(self.pos.x, self.pos.y);
+        self.objects.push(object.clone());
+        Ok(object)
     }
 
     pub(super) fn to_front_object(&mut self, index: usize) {
@@ -116,7 +120,7 @@ impl Window {
 
         self.on_cursor_object = None;
         for (index, object) in self.objects.iter().enumerate().rev() {
-            if object.global_pos.x <= self.cursor_pos.x && self.cursor_pos.x <= object.global_pos.x + object.size.x && object.global_pos.y <= self.cursor_pos.y && self.cursor_pos.y <= object.global_pos.y + object.size.y {
+            if object.borrow().global_pos.x <= self.cursor_pos.x && self.cursor_pos.x <= object.borrow().global_pos.x + object.borrow().size.x && object.borrow().global_pos.y <= self.cursor_pos.y && self.cursor_pos.y <= object.borrow().global_pos.y + object.borrow().size.y {
                 self.on_cursor_object = Some(index);
                 break;
             }
@@ -124,13 +128,13 @@ impl Window {
 
         if self.on_cursor_object != self.prev_on_cursor_object {
             if self.on_cursor_object.is_some() {
-                spdlog::info!("Window({}).object({}): mouse on", self.id, self.objects[self.on_cursor_object.unwrap()].id);
-                self.objects[self.on_cursor_object.unwrap()].mouse_on();
+                spdlog::info!("Window({}).object({}): mouse on", self.id, self.objects[self.on_cursor_object.unwrap()].borrow().id);
+                self.objects[self.on_cursor_object.unwrap()].borrow_mut().mouse_on();
             }
 
             if self.prev_on_cursor_object.is_some() {
-                spdlog::info!("Window({}).object({}): mouse off", self.id, self.objects[self.prev_on_cursor_object.unwrap()].id);
-                self.objects[self.prev_on_cursor_object.unwrap()].mouse_off();
+                spdlog::info!("Window({}).object({}): mouse off", self.id, self.objects[self.prev_on_cursor_object.unwrap()].borrow().id);
+                self.objects[self.prev_on_cursor_object.unwrap()].borrow_mut().mouse_off();
             }
         }
 
@@ -141,16 +145,16 @@ impl Window {
         if mouse_down {
             if self.on_cursor_object.is_some() {
                 // 윈도우 활성화
-                spdlog::info!("Window({}).object({}): mouse down", self.id, self.objects[self.on_cursor_object.unwrap()].id);
-                self.objects[self.on_cursor_object.unwrap()].mouse_down();
+                spdlog::info!("Window({}).object({}): mouse down", self.id, self.objects[self.on_cursor_object.unwrap()].borrow().id);
+                self.objects[self.on_cursor_object.unwrap()].borrow_mut().mouse_down();
                 self.to_front_object(self.on_cursor_object.unwrap())
             } else {
                 // 활성화된 윈도우 없음
             }
         } else {
             if self.on_cursor_object.is_some() {
-                spdlog::info!("Window({}).object({}): mouse up", self.id, self.objects[self.on_cursor_object.unwrap()].id);
-                self.objects[self.on_cursor_object.unwrap()].mouse_up();
+                spdlog::info!("Window({}).object({}): mouse up", self.id, self.objects[self.on_cursor_object.unwrap()].borrow().id);
+                self.objects[self.on_cursor_object.unwrap()].borrow_mut().mouse_up();
             }
             // 가장 맨 위의 윈도우
             if self.objects.last().is_some() {
@@ -167,7 +171,16 @@ impl Window {
         self.pos.x = x;
         self.pos.y = y;
         for object in &mut self.objects {
-            object.set_base_pos(x, y);
+            object.borrow_mut().set_base_pos(x, y);
+        }
+        self
+    }
+
+    pub fn add_pos(&mut self, x: f32, y: f32) -> &mut Self {
+        self.pos.x += x;
+        self.pos.y += y;
+        for object in &self.objects {
+            object.borrow_mut().set_base_pos(self.pos.x, self.pos.y);
         }
         self
     }
@@ -175,6 +188,13 @@ impl Window {
     pub fn set_size(&mut self, width: f32, height: f32) -> &mut Self {
         self.size.x = width;
         self.size.y = height;
+        self.reshape();
+        self
+    }
+
+    pub fn add_size(&mut self, width: f32, height: f32) -> &mut Self {
+        self.size.x += width;
+        self.size.y += height;
         self.reshape();
         self
     }
@@ -228,9 +248,9 @@ impl Window {
 
         self.update();
 
-        for object in &mut self.objects {
-            object.ratio = self.ratio;
-            object.reshape();
+        for object in &self.objects {
+            object.borrow_mut().ratio = self.ratio;
+            object.borrow_mut().reshape();
         }
     }
 
@@ -277,7 +297,7 @@ impl Window {
             gl::DrawElements(gl::TRIANGLES, 12, gl::UNSIGNED_INT, std::ptr::null());
         }
         for object in &self.objects{
-            object.render();
+            object.borrow().render();
         }
     }
 }

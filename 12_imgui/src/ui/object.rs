@@ -1,6 +1,6 @@
 use crate::{errors, shader::Shader, program::Program, vertex_array::VertexArray, buffer::Buffer, texture::Texture, image::Image};
 use nalgebra_glm as glm;
-use std::rc::Rc;
+use std::{rc::Rc, cell::RefCell};
 
 #[derive(PartialEq, Eq)]
 pub enum ShaderType {
@@ -24,7 +24,8 @@ pub struct Object {
     pub(super) vbo: Buffer,
     pub(super) ebo: Buffer,
     pub(super) tbo: Option<Texture>,
-    pub objects: Vec<Object>,
+    pub(super) total_objects: usize,
+    pub(super) objects: Vec<Rc<RefCell<Object>>>,
     pub(super) mouse_on_event: Rc<dyn Fn(&mut Self)>,
     pub(super) mouse_off_event: Rc<dyn Fn(&mut Self)>,
     pub(super) mouse_down_event: Rc<dyn Fn(&mut Self)>,
@@ -33,8 +34,7 @@ pub struct Object {
 }
 
 impl Object {
-    pub fn create(id: usize, frame_buffer_size_x: f32, frame_buffer_size_y: f32) -> Result<Self, errors::Error> {
-        let ratio = glm::vec2(2.0 / frame_buffer_size_x, 2.0 / frame_buffer_size_y);
+    pub fn create(id: usize, ratio: glm::Vec2) -> Result<Rc<RefCell<Self>>, errors::Error> {
         let local_pos = glm::vec2(0.0, 0.0);
         let base_pos = glm::vec2(0.0, 0.0);
         let global_pos = base_pos + local_pos;
@@ -66,23 +66,25 @@ impl Object {
         vao.set(0, 3, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 7) as i32, (size_of::<f32>() * 0) as *const _);
         vao.set(1, 4, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 7) as i32, (size_of::<f32>() * 3) as *const _);
 
-        let objects = Vec::<Object>::new();
+        let objects = Vec::new();
 
-        Ok(Self { id, ratio, local_pos, base_pos, global_pos, size, color, vertices, indices, program, vao, vbo, ebo, tbo: None, objects, mouse_on_event: Rc::new(|_| {}), mouse_off_event: Rc::new(|_| {}), mouse_down_event: Rc::new(|_| {}), mouse_up_event: Rc::new(|_| {}), shader_type: ShaderType::Color })
+        Ok(Rc::new(RefCell::new(Self { id, ratio, local_pos, base_pos, global_pos, size, color, vertices, indices, program, vao, vbo, ebo, tbo: None, total_objects: 0, objects, mouse_on_event: Rc::new(|_| {}), mouse_off_event: Rc::new(|_| {}), mouse_down_event: Rc::new(|_| {}), mouse_up_event: Rc::new(|_| {}), shader_type: ShaderType::Color })))
     }
 
-    pub fn push_object(&mut self, mut object: Object) -> &mut Self {
-        object.set_base_pos(self.global_pos.x, self.global_pos.y);
-        self.objects.push(object);
-        self
+    pub fn add_object(&mut self) -> Result<Rc::<RefCell::<Object>>, errors::Error> {
+        self.total_objects += 1;
+        let object = Object::create(self.total_objects, self.ratio)?;
+        object.borrow_mut().set_base_pos(self.global_pos.x, self.global_pos.y);
+        self.objects.push(object.clone());
+        Ok(object)
     }
 
     pub fn set_loacl_pos(&mut self, x: f32, y: f32) -> &mut Self {
         self.local_pos.x = x;
         self.local_pos.y = y;
         self.global_pos = self.base_pos + self.local_pos;
-        for object in &mut self.objects {
-            object.set_base_pos(self.global_pos.x, self.global_pos.y);
+        for object in &self.objects {
+            object.borrow_mut().set_base_pos(self.global_pos.x, self.global_pos.y);
         }
         self
     }
@@ -124,8 +126,8 @@ impl Object {
         self.base_pos.x = x;
         self.base_pos.y = y;
         self.global_pos = self.base_pos + self.local_pos;
-        for object in &mut self.objects {
-            object.set_base_pos(self.global_pos.x, self.global_pos.y);
+        for object in &self.objects {
+            object.borrow_mut().set_base_pos(self.global_pos.x, self.global_pos.y);
         }
         self
     }
@@ -141,9 +143,9 @@ impl Object {
         self.vertices[3 * (7 + offset) + 1] = 1.0 - self.size.y * self.ratio.y;
         self.update();
 
-        for object in &mut self.objects {
-            object.ratio = self.ratio;
-            object.reshape();
+        for object in &self.objects {
+            object.borrow_mut().ratio = self.ratio;
+            object.borrow_mut().reshape();
         }
     }
 
@@ -175,7 +177,7 @@ impl Object {
             gl::DrawElements(gl::TRIANGLES, 12, gl::UNSIGNED_INT, std::ptr::null());
         }
         for object in &self.objects {
-            object.render();
+            object.borrow().render();
         }
     }
 
@@ -200,23 +202,19 @@ impl Object {
     }
 
     pub(super) fn mouse_on(&mut self) {
-        let mouse_on_event = self.mouse_on_event.clone();
-        mouse_on_event(self);
+        (self.mouse_on_event.clone())(self)
     }
 
     pub(super) fn mouse_off(&mut self) {
-        let mouse_off_event = self.mouse_off_event.clone();
-        mouse_off_event(self);
+        (self.mouse_off_event.clone())(self);
     }
 
     pub(super) fn mouse_down(&mut self) {
-        let mouse_down_event = self.mouse_down_event.clone();
-        mouse_down_event(self);
+        (self.mouse_down_event.clone())(self);
     }
 
     pub(super) fn mouse_up(&mut self) {
-        let mouse_up_event = self.mouse_up_event.clone();
-        mouse_up_event(self);
+        (self.mouse_up_event.clone())(self);
     }
 
     pub fn set_shader_type(&mut self, shader_type: ShaderType) -> &mut Self {
@@ -268,6 +266,10 @@ impl Object {
             }
             self.tbo = None; // 자동으로 소멸자 호출
         }
+        self
+    }
+
+    pub fn get(&'static mut self) -> &'static mut Self {
         self
     }
 }

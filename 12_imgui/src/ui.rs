@@ -1,10 +1,15 @@
 pub mod window;
 pub mod object;
 
+use crate::errors;
+use crate::ui::window::Window;
+
 use nalgebra_glm as glm;
+use std::{rc::Rc, cell::RefCell};
 
 pub struct Manager {
-    pub windows: Vec<window::Window>,
+    total_windows: usize,
+    windows: Vec<Rc<RefCell<Window>>>,
     on_cursor_window: Option<usize>,
     prev_on_cursor_window: Option<usize>,
     frame_buffer_size: glm::Vec2,
@@ -15,17 +20,19 @@ pub struct Manager {
 
 impl Manager {
     pub fn create(frame_buffer_size_x: f32, frame_buffer_size_y: f32) -> Manager {
-        let windows=  Vec::<window::Window>::new();
+        let windows=  Vec::new();
         let frame_buffer_size = glm::vec2(frame_buffer_size_x, frame_buffer_size_y);
         let ratio = glm::vec2(2.0 / frame_buffer_size.x, 2.0 / frame_buffer_size.y);
         let cursor_pos= glm::vec2(0.0, 0.0);
         let prev_cursor_pos = glm::vec2(0.0, 0.0);
-        Manager { windows, on_cursor_window: None, prev_on_cursor_window: None, frame_buffer_size, ratio, cursor_pos, prev_cursor_pos }
+        Manager { total_windows: 0, windows, on_cursor_window: None, prev_on_cursor_window: None, frame_buffer_size, ratio, cursor_pos, prev_cursor_pos }
     }
 
-    pub fn push_window(&mut self, window: window::Window) -> &mut Self {
-        self.windows.push(window);
-        self
+    pub fn add_window(&mut self) -> Result<Rc::<RefCell::<Window>>, errors::Error> {
+        self.total_windows += 1;
+        let window = Window::create(self.total_windows, self.frame_buffer_size.x, self.frame_buffer_size.y)?;
+        self.windows.push(window.clone());
+        Ok(window)
     }
 
     fn to_front_window(&mut self, index: usize) {
@@ -56,37 +63,39 @@ impl Manager {
         let delta_pos = self.cursor_pos - self.prev_cursor_pos;
         // 윈도우 이동 및 크기 조정
         if self.windows.last().is_some() {
-            let focused_window = self.windows.last_mut().unwrap();
+            let mut focused_window = self.windows[self.windows.len() - 1].borrow_mut();
+            let focused_window_size_x = focused_window.size.x;
+            let focused_window_size_y = focused_window.size.y;
             if focused_window.moving {
-                focused_window.set_pos(focused_window.pos.x + delta_pos.x, focused_window.pos.y + delta_pos.y);
+                focused_window.add_pos(delta_pos.x, delta_pos.y);
             }
             if focused_window.sizing[0] && self.prev_cursor_pos.y < focused_window.pos.y + focused_window.frame_size {
-                focused_window.set_size(focused_window.size.x, focused_window.size.y - delta_pos.y);
-                focused_window.set_pos(focused_window.pos.x, focused_window.pos.y + delta_pos.y);
+                focused_window.add_size(0.0, -delta_pos.y);
+                focused_window.add_pos(0.0, delta_pos.y);
                 
-                if focused_window.size.y < 0.0 {
-                    focused_window.set_pos(focused_window.pos.x, focused_window.pos.y + focused_window.size.y);
-                    focused_window.set_size(focused_window.size.x, 0.0);
+                if focused_window_size_y < 0.0 {
+                    focused_window.add_pos(0.0, focused_window_size_y);
+                    focused_window.set_size(focused_window_size_x, 0.0);
                 }
             }
-            if focused_window.sizing[1] && focused_window.pos.x + focused_window.frame_size + focused_window.size.x <= self.prev_cursor_pos.x {
-                focused_window.set_size(focused_window.size.x + delta_pos.x, focused_window.size.y);
-                if focused_window.size.x < 0.0 {
-                    focused_window.set_size(0.0, focused_window.size.y);
+            if focused_window.sizing[1] && focused_window.pos.x + focused_window.frame_size + focused_window_size_x <= self.prev_cursor_pos.x {
+                focused_window.add_size(delta_pos.x, 0.0);
+                if focused_window_size_x < 0.0 {
+                    focused_window.set_size(0.0, focused_window_size_y);
                 }
             }
-            if focused_window.sizing[2] && focused_window.pos.y + focused_window.size.y + focused_window.frame_size * 5.0 <= self.prev_cursor_pos.y {
-                focused_window.set_size(focused_window.size.x, focused_window.size.y + delta_pos.y);
-                if focused_window.size.y < 0.0 {
-                    focused_window.set_size(focused_window.size.x, 0.0);
+            if focused_window.sizing[2] && focused_window.pos.y + focused_window_size_y + focused_window.frame_size * 5.0 <= self.prev_cursor_pos.y {
+                focused_window.add_size(0.0, delta_pos.y);
+                if focused_window_size_y < 0.0 {
+                    focused_window.set_size(focused_window_size_x, 0.0);
                 }
             }
             if focused_window.sizing[3] && self.prev_cursor_pos.x < focused_window.pos.x + focused_window.frame_size {
-                focused_window.set_size(focused_window.size.x - delta_pos.x, focused_window.size.y);
-                focused_window.set_pos(focused_window.pos.x + delta_pos.x, focused_window.pos.y);
-                if focused_window.size.x < 0.0 {
-                    focused_window.set_pos(focused_window.pos.x + focused_window.size.x, focused_window.pos.y);
-                    focused_window.set_size(0.0, focused_window.size.y);
+                focused_window.add_size(-delta_pos.x, 0.0);
+                focused_window.add_pos(delta_pos.x, 0.0);
+                if focused_window_size_x < 0.0 {
+                    focused_window.add_pos(focused_window_size_x, 0.0);
+                    focused_window.set_size(0.0, focused_window_size_y);
                 }
             }
             focused_window.reshape();
@@ -95,7 +104,7 @@ impl Manager {
         self.prev_cursor_pos = self.cursor_pos;
 
         self.on_cursor_window = None;
-        for (index, window) in self.windows.iter_mut().enumerate().rev() {
+        for (index, mut window) in self.windows.iter().map(|w|{ w.borrow_mut() }).enumerate().rev() {
             if window.pos.x <= self.cursor_pos.x && self.cursor_pos.x <= window.pos.x + (window.size.x + window.frame_size * 2.0) && window.pos.y <= self.cursor_pos.y && self.cursor_pos.y <= window.pos.y + (window.size.y + window.frame_size * 6.0) {
                 self.on_cursor_window = Some(index);
                 window.on_cursor_pos_event(x, y);
@@ -105,13 +114,13 @@ impl Manager {
 
         if self.on_cursor_window != self.prev_on_cursor_window {
             if self.on_cursor_window.is_some() {
-                spdlog::info!("Window({}): mouse on", self.windows[self.on_cursor_window.unwrap()].id);
-                self.windows[self.on_cursor_window.unwrap()].mouse_on();
+                spdlog::info!("Window({}): mouse on", self.windows[self.on_cursor_window.unwrap()].borrow().id);
+                self.windows[self.on_cursor_window.unwrap()].borrow_mut().mouse_on();
             }
 
             if self.prev_on_cursor_window.is_some() {
-                spdlog::info!("Window({}): mouse off", self.windows[self.prev_on_cursor_window.unwrap()].id);
-                self.windows[self.prev_on_cursor_window.unwrap()].mouse_off();
+                spdlog::info!("Window({}): mouse off", self.windows[self.prev_on_cursor_window.unwrap()].borrow().id);
+                self.windows[self.prev_on_cursor_window.unwrap()].borrow_mut().mouse_off();
             }
         }
 
@@ -122,22 +131,22 @@ impl Manager {
         if mouse_down {
             if self.on_cursor_window.is_some() {
                 // 윈도우 활성화
-                self.windows[self.on_cursor_window.unwrap()].on_mouse_down_event(mouse_down);
-                spdlog::info!("Window({}): mouse down", self.windows[self.on_cursor_window.unwrap()].id);
-                self.windows[self.on_cursor_window.unwrap()].mouse_down(self.cursor_pos);
+                self.windows[self.on_cursor_window.unwrap()].borrow_mut().on_mouse_down_event(mouse_down);
+                spdlog::info!("Window({}): mouse down", self.windows[self.on_cursor_window.unwrap()].borrow().id);
+                self.windows[self.on_cursor_window.unwrap()].borrow_mut().mouse_down(self.cursor_pos);
                 self.to_front_window(self.on_cursor_window.unwrap())
             } else {
                 // 활성화된 윈도우 없음
             }
         } else {
             if self.on_cursor_window.is_some() {
-                self.windows[self.on_cursor_window.unwrap()].on_mouse_down_event(mouse_down);
-                spdlog::info!("Window({}): mouse up", self.windows[self.on_cursor_window.unwrap()].id);
-                self.windows[self.on_cursor_window.unwrap()].mouse_up();
+                self.windows[self.on_cursor_window.unwrap()].borrow_mut().on_mouse_down_event(mouse_down);
+                spdlog::info!("Window({}): mouse up", self.windows[self.on_cursor_window.unwrap()].borrow().id);
+                self.windows[self.on_cursor_window.unwrap()].borrow_mut().mouse_up();
             }
             // 가장 맨 위의 윈도우
             if self.windows.last().is_some() {
-                let focused_window = self.windows.last_mut().unwrap();
+                let mut focused_window = self.windows[self.windows.len() - 1].borrow_mut();
                 focused_window.moving = false;
                 for i in 0..4 {
                     focused_window.sizing[i] = false;
@@ -151,7 +160,7 @@ impl Manager {
         self.frame_buffer_size.y = frame_buffer_size_y;
         self.ratio.x = 2.0 / self.frame_buffer_size.x;
         self.ratio.y = 2.0 / self.frame_buffer_size.y;
-        for window in &mut self.windows {
+        for mut window in self.windows.iter().map(|w|{ w.borrow_mut() }) {
             window.ratio = self.ratio;
             window.reshape();
         }
@@ -161,7 +170,7 @@ impl Manager {
         unsafe {
             gl::Disable(gl::DEPTH_TEST);
         }
-        for window in &self.windows {
+        for window in self.windows.iter().map(|w|{ w.borrow_mut() }) {
             window.render();
         }
     }
