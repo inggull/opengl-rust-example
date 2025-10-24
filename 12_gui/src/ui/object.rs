@@ -2,6 +2,13 @@ use crate::{errors, shader::Shader, program::Program, vertex_array::VertexArray,
 use nalgebra_glm as glm;
 use std::rc::Rc;
 
+#[derive(PartialEq, Eq)]
+pub enum ShaderType {
+    Color,
+    Texture,
+    Mix,
+}
+
 pub struct Object {
     pub(super) id: usize,
     pub(super) ratio: glm::Vec2,
@@ -22,7 +29,7 @@ pub struct Object {
     pub(super) mouse_off_event: Rc<dyn Fn(&mut Self)>,
     pub(super) mouse_down_event: Rc<dyn Fn(&mut Self)>,
     pub(super) mouse_up_event: Rc<dyn Fn(&mut Self)>,
-    offset: usize,
+    pub(super) shader_type: ShaderType,
 }
 
 impl Object {
@@ -61,47 +68,7 @@ impl Object {
 
         let objects = Vec::<Object>::new();
 
-        Ok(Self { id, ratio, local_pos, base_pos, global_pos, size, color, vertices, indices, program, vao, vbo, ebo, tbo: None, objects, mouse_on_event: Rc::new(|_| {}), mouse_off_event: Rc::new(|_| {}), mouse_down_event: Rc::new(|_| {}), mouse_up_event: Rc::new(|_| {}), offset: 0 })
-    }
-
-    pub fn enable_texture(&mut self) -> &mut Self {
-        self.offset = 2;
-        self.program.use_();
-        let vertices: [f32; 36] = [
-            -1.0, 1.0, 0.0, self.color.x, self.color.y, self.color.z, self.color.w, 0.0, 1.0, // 0: 좌측 상단
-            -1.0 + self.size.x * self.ratio.x, 1.0, 0.0, self.color.x, self.color.y, self.color.z, self.color.w, 1.0, 1.0, // 1: 우측 상단
-            -1.0, 1.0 - self.size.y * self.ratio.y, 0.0, self.color.x, self.color.y, self.color.z, self.color.w, 0.0, 0.0, // 2: 좌측 하단
-            -1.0 + self.size.x * self.ratio.x, 1.0 - self.size.y * self.ratio.y, 0.0, self.color.x, self.color.y, self.color.z, self.color.w, 1.0, 0.0, // 3: 우측 하단
-        ];
-        self.vertices = vertices.to_vec();
-        self.vao.bind();
-        self.vbo.set(gl::ARRAY_BUFFER, size_of_val(self.vertices.as_slice()).cast_signed(), self.vertices.as_ptr().cast(), gl::STATIC_DRAW);
-        self.vao.set(0, 3, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 9) as i32, (size_of::<f32>() * 0) as *const _);
-        self.vao.set(1, 4, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 9) as i32, (size_of::<f32>() * 3) as *const _);
-        self.vao.set(2, 2, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 9) as i32, (size_of::<f32>() * 7) as *const _);
-        self.tbo = Some(Texture::create());
-        self
-    }
-
-    pub fn disable_texture(&mut self) -> &mut Self {
-        self.offset = 0;
-        self.program.use_();
-        let vertices: [f32; 28] = [
-            -1.0, 1.0, 0.0, self.color.x, self.color.y, self.color.z, self.color.w, // 0: 좌측 상단
-            -1.0 + self.size.x * self.ratio.x, 1.0, 0.0, self.color.x, self.color.y, self.color.z, self.color.w, // 1: 우측 상단
-            -1.0, 1.0 - self.size.y * self.ratio.y, 0.0, self.color.x, self.color.y, self.color.z, self.color.w, // 2: 좌측 하단
-            -1.0 + self.size.x * self.ratio.x, 1.0 - self.size.y * self.ratio.y, 0.0, self.color.x, self.color.y, self.color.z, self.color.w, // 3: 우측 하단
-        ];
-        self.vertices = vertices.to_vec();
-        self.vao.bind();
-        self.vbo.set(gl::ARRAY_BUFFER, size_of_val(self.vertices.as_slice()).cast_signed(), self.vertices.as_ptr().cast(), gl::STATIC_DRAW);
-        self.vao.set(0, 3, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 7) as i32, (size_of::<f32>() * 0) as *const _);
-        self.vao.set(1, 4, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 7) as i32, (size_of::<f32>() * 3) as *const _);
-        unsafe {
-            gl::DisableVertexAttribArray(2);
-            // gl::DeleteBuffers(1, &self.tbo.as_ref().unwrap().get());
-        }
-        self
+        Ok(Self { id, ratio, local_pos, base_pos, global_pos, size, color, vertices, indices, program, vao, vbo, ebo, tbo: None, objects, mouse_on_event: Rc::new(|_| {}), mouse_off_event: Rc::new(|_| {}), mouse_down_event: Rc::new(|_| {}), mouse_up_event: Rc::new(|_| {}), shader_type: ShaderType::Color })
     }
 
     pub fn push_object(&mut self, mut object: Object) -> &mut Self {
@@ -132,11 +99,15 @@ impl Object {
         self.color.y = g as f32 / 255.0;
         self.color.z = b as f32 / 255.0;
         self.color.w = a as f32 / 255.0;
+        let mut offset = 0;
+        if self.tbo.is_some() {
+            offset = 2;
+        }
         for index in 0..4 {
-            self.vertices[index * (7 + self.offset) + 3] = self.color.x;
-            self.vertices[index * (7 + self.offset) + 4] = self.color.y;
-            self.vertices[index * (7 + self.offset) + 5] = self.color.z;
-            self.vertices[index * (7 + self.offset) + 6] = self.color.w;
+            self.vertices[index * (7 + offset) + 3] = self.color.x;
+            self.vertices[index * (7 + offset) + 4] = self.color.y;
+            self.vertices[index * (7 + offset) + 5] = self.color.z;
+            self.vertices[index * (7 + offset) + 6] = self.color.w;
         }
         self.update();
         self
@@ -160,10 +131,14 @@ impl Object {
     }
 
     pub(super) fn reshape(&mut self) {
-        self.vertices[1 * (7 + self.offset)] = -1.0 + self.size.x * self.ratio.x;
-        self.vertices[2 * (7 + self.offset) + 1] = 1.0 - self.size.y * self.ratio.y;
-        self.vertices[3 * (7 + self.offset)] = -1.0 + self.size.x * self.ratio.x;
-        self.vertices[3 * (7 + self.offset) + 1] = 1.0 - self.size.y * self.ratio.y;
+        let mut offset = 0;
+        if self.tbo.is_some() {
+            offset = 2;
+        }
+        self.vertices[1 * (7 + offset)] = -1.0 + self.size.x * self.ratio.x;
+        self.vertices[2 * (7 + offset) + 1] = 1.0 - self.size.y * self.ratio.y;
+        self.vertices[3 * (7 + offset)] = -1.0 + self.size.x * self.ratio.x;
+        self.vertices[3 * (7 + offset) + 1] = 1.0 - self.size.y * self.ratio.y;
         self.update();
 
         for object in &mut self.objects {
@@ -185,13 +160,17 @@ impl Object {
             self.vao.bind();
             self.program.use_();
             self.program.set_uniform_matrix4fv("transform\0", &transform);
-            if let Some(tbo) = &self.tbo {
-                gl::ActiveTexture(gl::TEXTURE0);
-                tbo.bind();
-                self.program.set_uniform1i("texture0\0", 0);
-                self.program.set_uniform1i("flag\0", 1);
+            if self.shader_type == ShaderType::Color {
+                self.program.set_uniform1i("shader_type\0", 0);
             } else {
-                self.program.set_uniform1i("flag\0", 0);
+                gl::ActiveTexture(gl::TEXTURE0);
+                self.tbo.as_ref().unwrap().bind();
+                self.program.set_uniform1i("texture0\0", 0);
+                if self.shader_type == ShaderType::Texture {
+                    self.program.set_uniform1i("shader_type\0", 1);
+                } else {
+                    self.program.set_uniform1i("shader_type\0", 2);
+                }
             }
             gl::DrawElements(gl::TRIANGLES, 12, gl::UNSIGNED_INT, std::ptr::null());
         }
@@ -240,7 +219,55 @@ impl Object {
         mouse_up_event(self);
     }
 
-    pub fn get_size(&mut self) -> &glm::Vec2 {
-        &self.size
+    pub fn set_shader_type(&mut self, shader_type: ShaderType) -> &mut Self {
+        if shader_type == ShaderType::Color {
+            self.disable_texture();
+        } else {
+            self.enable_texture();
+        }
+        self.shader_type = shader_type;
+        self
+    }
+
+    fn enable_texture(&mut self) -> &mut Self {
+        if self.tbo.is_none() {
+            self.program.use_();
+            let vertices: [f32; 36] = [
+                -1.0, 1.0, 0.0, self.color.x, self.color.y, self.color.z, self.color.w, 0.0, 1.0, // 0: 좌측 상단
+                -1.0 + self.size.x * self.ratio.x, 1.0, 0.0, self.color.x, self.color.y, self.color.z, self.color.w, 1.0, 1.0, // 1: 우측 상단
+                -1.0, 1.0 - self.size.y * self.ratio.y, 0.0, self.color.x, self.color.y, self.color.z, self.color.w, 0.0, 0.0, // 2: 좌측 하단
+                -1.0 + self.size.x * self.ratio.x, 1.0 - self.size.y * self.ratio.y, 0.0, self.color.x, self.color.y, self.color.z, self.color.w, 1.0, 0.0, // 3: 우측 하단
+            ];
+            self.vertices = vertices.to_vec();
+            self.vao.bind();
+            self.vbo.set(gl::ARRAY_BUFFER, size_of_val(self.vertices.as_slice()).cast_signed(), self.vertices.as_ptr().cast(), gl::STATIC_DRAW);
+            self.vao.set(0, 3, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 9) as i32, (size_of::<f32>() * 0) as *const _);
+            self.vao.set(1, 4, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 9) as i32, (size_of::<f32>() * 3) as *const _);
+            self.vao.set(2, 2, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 9) as i32, (size_of::<f32>() * 7) as *const _);
+            self.tbo = Some(Texture::create());
+        }
+        self
+    }
+
+    fn disable_texture(&mut self) -> &mut Self {
+        if self.tbo.is_some() {
+                self.program.use_();
+            let vertices: [f32; 28] = [
+                -1.0, 1.0, 0.0, self.color.x, self.color.y, self.color.z, self.color.w, // 0: 좌측 상단
+                -1.0 + self.size.x * self.ratio.x, 1.0, 0.0, self.color.x, self.color.y, self.color.z, self.color.w, // 1: 우측 상단
+                -1.0, 1.0 - self.size.y * self.ratio.y, 0.0, self.color.x, self.color.y, self.color.z, self.color.w, // 2: 좌측 하단
+                -1.0 + self.size.x * self.ratio.x, 1.0 - self.size.y * self.ratio.y, 0.0, self.color.x, self.color.y, self.color.z, self.color.w, // 3: 우측 하단
+            ];
+            self.vertices = vertices.to_vec();
+            self.vao.bind();
+            self.vbo.set(gl::ARRAY_BUFFER, size_of_val(self.vertices.as_slice()).cast_signed(), self.vertices.as_ptr().cast(), gl::STATIC_DRAW);
+            self.vao.set(0, 3, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 7) as i32, (size_of::<f32>() * 0) as *const _);
+            self.vao.set(1, 4, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 7) as i32, (size_of::<f32>() * 3) as *const _);
+            unsafe {
+                gl::DisableVertexAttribArray(2);
+            }
+            self.tbo = None; // 자동으로 소멸자 호출
+        }
+        self
     }
 }

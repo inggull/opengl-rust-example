@@ -10,6 +10,7 @@ mod image;
 mod ui;
 
 use glfw::Context;
+use ui::{Manager, window::Window, object::{ShaderType, Object}};
 
 const WINDOW_NAME: &'static str = "Gui";
 const WINDOW_WIDTH: u32 = 640;
@@ -61,11 +62,11 @@ fn inner_main() -> Result<(), errors::Error> {
     let minimize = image::Image::load("resources/images/minimize.png")?;
     spdlog::info!("Loaded image file \"resources/images/minimize.png\" ({} x {}, {} channels)", minimize.get_width(), minimize.get_height(), minimize.get_channel_count());
 
-    let mut ui_manager = ui::Manager::create(WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32);
+    let mut ui_manager = Manager::create(WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32);
 
-    let window_1 = ui::window::Window::create(1, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
-    let window_2 = ui::window::Window::create(2, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
-    let window_3 = ui::window::Window::create(3, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let window_1 = Window::create(1, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let window_2 = Window::create(2, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let window_3 = Window::create(3, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
 
     ui_manager.push_window(window_1).push_window(window_2).push_window(window_3);
 
@@ -73,9 +74,9 @@ fn inner_main() -> Result<(), errors::Error> {
     ui_manager.windows[1].set_pos(100.0, 100.0).set_frame_color(0,192,255, 224).set_color(32, 32, 32, 255);
     ui_manager.windows[2].set_pos(200.0, 200.0).set_frame_color(32,128,255, 224).set_color(32, 32, 32, 255);
 
-    let button_1 = ui::object::Object::create(1, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
-    let button_2 = ui::object::Object::create(2, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
-    let button_3 = ui::object::Object::create(3, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let button_1 = Object::create(1, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let button_2 = Object::create(2, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let button_3 = Object::create(3, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
 
     ui_manager.windows[0].push_object(button_1).push_object(button_2).push_object(button_3);
 
@@ -84,18 +85,17 @@ fn inner_main() -> Result<(), errors::Error> {
     ui_manager.windows[0].objects[1].set_loacl_pos(window_1_size_x + 6.0 - 48.0 - 24.0, 0.0).set_size(24.0, 24.0).set_color(255, 255, 255, 0);
     ui_manager.windows[0].objects[2].set_loacl_pos(window_1_size_x + 6.0 - 48.0 - 24.0 - 24.0, 0.0).set_size(24.0, 24.0).set_color(255, 255, 255, 0);
 
-    let texture_1 = ui::object::Object::create(4, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
-    let texture_2 = ui::object::Object::create(5, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
-    let texture_3 = ui::object::Object::create(6, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let texture_1 = Object::create(4, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let texture_2 = Object::create(5, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let texture_3 = Object::create(6, WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
 
     ui_manager.windows[0].objects[0].push_object(texture_1);
     ui_manager.windows[0].objects[1].push_object(texture_2);
     ui_manager.windows[0].objects[2].push_object(texture_3);
 
-    ui_manager.windows[0].objects[0].objects[0].enable_texture().set_texture(&close).set_size(16.0, 16.0).set_loacl_pos(16.0, 4.0).set_color(255, 255, 255, 255);
-    // ui_manager.windows[0].objects[0].objects[0].disable_texture();
-    ui_manager.windows[0].objects[1].objects[0].enable_texture().set_texture(&maximize).set_size(16.0, 16.0).set_loacl_pos(4.0, 4.0).set_color(0, 0, 0, 255);
-    ui_manager.windows[0].objects[2].objects[0].enable_texture().set_texture(&minimize).set_size(16.0, 16.0).set_loacl_pos(4.0, 4.0).set_color(0, 0, 0, 255);
+    ui_manager.windows[0].objects[0].objects[0].set_shader_type(ShaderType::Mix).set_texture(&close).set_size(16.0, 16.0).set_loacl_pos(16.0, 4.0).set_color(255, 255, 255, 255);
+    ui_manager.windows[0].objects[1].objects[0].set_shader_type(ShaderType::Texture).set_texture(&maximize).set_size(16.0, 16.0).set_loacl_pos(4.0, 4.0).set_color(0, 0, 0, 255);
+    ui_manager.windows[0].objects[2].objects[0].set_shader_type(ShaderType::Texture).set_texture(&minimize).set_size(16.0, 16.0).set_loacl_pos(4.0, 4.0).set_color(0, 0, 0, 255);
 
     ui_manager.windows[0].objects[0].set_mouse_on_event(|button| {
         button.set_color(208, 32, 32, 255);

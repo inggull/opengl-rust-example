@@ -72,7 +72,7 @@ impl Texture {
 impl Drop for Texture {
     fn drop(&mut self) {
         unsafe { 
-            gl::DeleteBuffers(1, &mut self.texture);
+            gl::DeleteTextures(1, &mut self.texture);
         }
         spdlog::info!("Dropped texture({})", self.texture);
     }
