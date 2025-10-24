@@ -10,7 +10,7 @@ mod image;
 
 use glfw::Context;
 
-const WINDOW_NAME: &'static str = "ImGui";
+const WINDOW_NAME: &'static str = "DearImGui";
 const WINDOW_WIDTH: u32 = 640;
 const WINDOW_HEIGHT: u32 = 480;
 

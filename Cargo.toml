@@ -11,6 +11,6 @@ members = [
     "08_transform",
     "09_camera",
     "10_interactive_camera",
-    "11_imgui",
-    "12_gui",
+    "11_dear_imgui",
+    "12_my_imgui",
 ]

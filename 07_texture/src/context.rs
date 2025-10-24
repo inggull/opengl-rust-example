@@ -53,8 +53,10 @@ impl Context {
         let rust = image::Image::load("resources/images/rust.jpg")?;
         spdlog::info!("Loaded image file \"resources/images/rust.jpg\" ({} x {}, {} channels)", rust.get_width(), rust.get_height(), rust.get_channel_count());
 
-        let tbo1 = texture::Texture::create(&logo);
-        let tbo2 = texture::Texture::create(&rust);
+        let tbo1 = texture::Texture::create();
+        tbo1.set_texture(&logo);
+        let tbo2 = texture::Texture::create();
+        tbo2.set_texture(&rust);
 
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0); // 0번 텍스쳐를 활성화

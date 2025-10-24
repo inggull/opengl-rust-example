@@ -12,7 +12,7 @@ mod ui;
 use glfw::Context;
 use ui::{Manager, window::Window, object::{ShaderType, Object}};
 
-const WINDOW_NAME: &'static str = "Gui";
+const WINDOW_NAME: &'static str = "MyImGui";
 const WINDOW_WIDTH: u32 = 640;
 const WINDOW_HEIGHT: u32 = 480;
 
