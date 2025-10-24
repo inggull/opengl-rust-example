@@ -92,8 +92,10 @@ impl Context {
         let container = image::Image::load("resources/images/container.jpg")?;
         spdlog::info!("Loaded image file \"resources/images/container.jpg\" ({} x {}, {} channels)", container.get_width(), container.get_height(), container.get_channel_count());
 
-        let tbo1 = texture::Texture::create(&awesomeface);
-        let tbo2 = texture::Texture::create(&container);
+        let tbo1 = texture::Texture::create();
+        tbo1.set_texture(&awesomeface);
+        let tbo2 = texture::Texture::create();
+        tbo2.set_texture(&container);
 
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0); // 0번 텍스쳐를 활성화
