@@ -86,7 +86,7 @@ impl Window {
     pub fn add_object(&mut self) -> Result<Rc::<RefCell::<Object>>, errors::Error> {
         self.total_objects += 1;
         let object = Object::create(self.total_objects, self.ratio)?;
-        object.borrow_mut().set_base_pos(self.pos.x, self.pos.y);
+        object.borrow_mut().set_base_pos(Some(self.pos.x), Some(self.pos.y));
         self.objects.push(object.clone());
         Ok(object)
     }
@@ -169,7 +169,7 @@ impl Window {
         self.pos.x = x;
         self.pos.y = y;
         for object in &mut self.objects {
-            object.borrow_mut().set_base_pos(x, y);
+            object.borrow_mut().set_base_pos(Some(x), Some(y));
         }
         self
     }
@@ -178,7 +178,7 @@ impl Window {
         self.pos.x += x;
         self.pos.y += y;
         for object in &self.objects {
-            object.borrow_mut().set_base_pos(self.pos.x, self.pos.y);
+            object.borrow_mut().set_base_pos(Some(self.pos.x), Some(self.pos.y));
         }
         self
     }

@@ -246,9 +246,9 @@ impl Object {
             self.background_color = background_color; 
             for index in 3..7 {
                 self.vertices_content[0 + index] = background_color.r;
-                self.vertices_content[7 + index] = background_color.g;
-                self.vertices_content[14 + index] = background_color.b;
-                self.vertices_content[21 + index] = background_color.a;
+                self.vertices_content[9 + index] = background_color.g;
+                self.vertices_content[18 + index] = background_color.b;
+                self.vertices_content[27 + index] = background_color.a;
             }
         }
         self
@@ -285,14 +285,14 @@ impl Object {
         self.vertices_border[105] = -1.0 + self.border.size[3] * self.ratio.x;
         self.vertices_border[106] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
         // content
-        self.vertices_content[112] = -1.0 + (self.border.size[3] + self.padding[3]) * self.ratio.x;
-        self.vertices_content[113] = 1.0 - (self.border.size[0] + self.padding[0]) * self.ratio.y;
-        self.vertices_content[121] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
-        self.vertices_content[122] = 1.0 - (self.border.size[0] + self.padding[0]) * self.ratio.y;
-        self.vertices_content[130] = -1.0 + (self.border.size[3] + self.padding[3]) * self.ratio.x;
-        self.vertices_content[131] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
-        self.vertices_content[139] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
-        self.vertices_content[140] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
+        self.vertices_content[0] = -1.0 + (self.border.size[3] + self.padding[3]) * self.ratio.x;
+        self.vertices_content[1] = 1.0 - (self.border.size[0] + self.padding[0]) * self.ratio.y;
+        self.vertices_content[9] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
+        self.vertices_content[10] = 1.0 - (self.border.size[0] + self.padding[0]) * self.ratio.y;
+        self.vertices_content[18] = -1.0 + (self.border.size[3] + self.padding[3]) * self.ratio.x;
+        self.vertices_content[19] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
+        self.vertices_content[27] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
+        self.vertices_content[28] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
         self.vao_border.bind();
         self.vbo_border.set(gl::ARRAY_BUFFER, size_of_val(&self.vertices_border).cast_signed(), self.vertices_border.as_ptr().cast(), gl::STATIC_DRAW);
         self.vao_content.bind();
@@ -348,21 +348,58 @@ impl Object {
         if let Some(bottom) = bottom { self.padding[2] = bottom; };
         if let Some(left) = left { self.padding[3] = left; };
         // content
-        self.vertices_content[112] = -1.0 + (self.border.size[3] + self.padding[3]) * self.ratio.x;
-        self.vertices_content[113] = 1.0 - (self.border.size[0] + self.padding[0]) * self.ratio.y;
-        self.vertices_content[121] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
-        self.vertices_content[122] = 1.0 - (self.border.size[0] + self.padding[0]) * self.ratio.y;
-        self.vertices_content[130] = -1.0 + (self.border.size[3] + self.padding[3]) * self.ratio.x;
-        self.vertices_content[131] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
-        self.vertices_content[139] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
-        self.vertices_content[140] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
+        self.vertices_content[0] = -1.0 + (self.border.size[3] + self.padding[3]) * self.ratio.x;
+        self.vertices_content[1] = 1.0 - (self.border.size[0] + self.padding[0]) * self.ratio.y;
+        self.vertices_content[9] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
+        self.vertices_content[10] = 1.0 - (self.border.size[0] + self.padding[0]) * self.ratio.y;
+        self.vertices_content[18] = -1.0 + (self.border.size[3] + self.padding[3]) * self.ratio.x;
+        self.vertices_content[19] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
+        self.vertices_content[27] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
+        self.vertices_content[28] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
         self.vao_content.bind();
         self.vbo_content.set(gl::ARRAY_BUFFER, size_of_val(&self.vertices_content).cast_signed(), self.vertices_content.as_ptr().cast(), gl::STATIC_DRAW);
         self
     }
 
     pub fn reshape(&mut self) {
-
+        // border
+        self.vertices_border[7] = -1.0 + self.width * self.ratio.x;
+        self.vertices_border[14] = -1.0 + self.border.size[3] * self.ratio.x;
+        self.vertices_border[15] = 1.0 - self.border.size[0] * self.ratio.y;
+        self.vertices_border[21] = -1.0 + (self.width - self.border.size[1]) * self.ratio.x;
+        self.vertices_border[22] = 1.0 - self.border.size[0] * self.ratio.y;
+        self.vertices_border[28] = -1.0 + (self.width - self.border.size[1]) * self.ratio.x;
+        self.vertices_border[29] = 1.0 - self.border.size[0] * self.ratio.y;
+        self.vertices_border[35] = -1.0 + self.width * self.ratio.x;
+        self.vertices_border[42] = -1.0 + (self.width - self.border.size[1]) * self.ratio.x;
+        self.vertices_border[43] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
+        self.vertices_border[49] = -1.0 + self.width * self.ratio.x;
+        self.vertices_border[50] = 1.0 - self.height * self.ratio.y;
+        self.vertices_border[56] = -1.0 + self.border.size[3] * self.ratio.x;
+        self.vertices_border[57] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
+        self.vertices_border[63] = -1.0 + (self.width - self.border.size[1]) * self.ratio.x;
+        self.vertices_border[64] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
+        self.vertices_border[71] = 1.0 - self.height * self.ratio.y;
+        self.vertices_border[77] = -1.0 + self.width * self.ratio.x;
+        self.vertices_border[78] = 1.0 - self.height * self.ratio.y;
+        self.vertices_border[91] = -1.0 + self.border.size[3] * self.ratio.x;
+        self.vertices_border[92] = 1.0 - self.border.size[0] * self.ratio.y;
+        self.vertices_border[99] = 1.0 - self.height * self.ratio.y;
+        self.vertices_border[105] = -1.0 + self.border.size[3] * self.ratio.x;
+        self.vertices_border[106] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
+        // content
+        self.vertices_content[0] = -1.0 + (self.border.size[3] + self.padding[3]) * self.ratio.x;
+        self.vertices_content[1] = 1.0 - (self.border.size[0] + self.padding[0]) * self.ratio.y;
+        self.vertices_content[9] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
+        self.vertices_content[10] = 1.0 - (self.border.size[0] + self.padding[0]) * self.ratio.y;
+        self.vertices_content[18] = -1.0 + (self.border.size[3] + self.padding[3]) * self.ratio.x;
+        self.vertices_content[19] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
+        self.vertices_content[27] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
+        self.vertices_content[28] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
+        self.vao_border.bind();
+        self.vbo_border.set(gl::ARRAY_BUFFER, size_of_val(&self.vertices_border).cast_signed(), self.vertices_border.as_ptr().cast(), gl::STATIC_DRAW);
+        self.vao_content.bind();
+        self.vbo_content.set(gl::ARRAY_BUFFER, size_of_val(&self.vertices_content).cast_signed(), self.vertices_content.as_ptr().cast(), gl::STATIC_DRAW);
         for object in &self.objects {
             object.borrow_mut().ratio = self.ratio;
             object.borrow_mut().reshape();
@@ -376,6 +413,7 @@ impl Object {
         // border
         self.vao_border.bind();
         unsafe {
+            self.program.set_uniform_matrix4fv("transform\0", &transform);
             self.program.set_uniform1i("shader_type\0", 0);
             gl::DrawElements(gl::TRIANGLES, 24, gl::UNSIGNED_INT, std::ptr::null());
         }
@@ -448,6 +486,13 @@ impl Object {
         self
     }
 
+    pub fn set_texture(&mut self, image: &Image) -> &mut Self {
+        if let Some(tbo) = &mut self.tbo {
+            tbo.set_texture(image);
+        }
+        self
+    }
+
     fn enable_texture(&mut self) -> &mut Self {
         if self.tbo.is_none() {
             self.tbo = Some(Texture::create());
@@ -462,13 +507,6 @@ impl Object {
                 gl::DisableVertexAttribArray(2);
             }
             self.tbo = None; // 자동으로 소멸자 호출
-        }
-        self
-    }
-
-    pub fn set_texture(&mut self, image: &Image) -> &mut Self {
-        if let Some(tbo) = &mut self.tbo {
-            tbo.set_texture(image);
         }
         self
     }
