@@ -1,5 +1,5 @@
 [package]
-name = "imgui"
+name = "dear_imgui"
 version = "0.1.0"
 authors = ["WEON-Junseop <inggull@naver.com>"]
 edition = "2024"
