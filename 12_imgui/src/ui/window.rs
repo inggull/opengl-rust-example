@@ -9,7 +9,8 @@ pub struct Window {
     pub(super) sizing: [bool; 4],
     pub(super) ratio: glm::Vec2,
     pub(super) pos: glm::Vec2,
-    pub(super) size: glm::Vec2,
+    pub(super) width: f32,
+    pub(super) height: f32,
     pub(super) color: glm::Vec4,
     pub(super) frame_size: f32,
     pub(super) frame_color: glm::Vec4,
@@ -31,22 +32,23 @@ impl Window {
     pub fn create(id: usize, frame_buffer_size_x: f32, frame_buffer_size_y: f32) -> Result<Rc<RefCell<Self>>, errors::Error> {
         let ratio = glm::vec2(2.0 / frame_buffer_size_x, 2.0 / frame_buffer_size_y);
         let pos = glm::vec2(0.0, 0.0);
-        let size = glm::vec2(frame_buffer_size_x / 2.0, frame_buffer_size_y / 2.0);
+        let width = frame_buffer_size_x / 2.0;
+        let height = frame_buffer_size_y / 2.0;
         let frame_size: f32 = 6.0;
         let color = glm::vec4(1.0, 1.0, 1.0, 1.0);
         let frame_color = glm::vec4(1.0, 1.0, 1.0, 1.0);
         let vertices: [f32; 56] = [
             // 윈도우 내용
             -1.0, 1.0, 0.0, color.x, color.y, color.z, color.w, // 0: 좌측 상단
-            -1.0 + size.x * ratio.x, 1.0, 0.0, color.x, color.y, color.z, color.w, // 1: 우측 상단
-            -1.0, 1.0 - size.y * ratio.y, 0.0, color.x, color.y, color.z, color.w, // 2: 좌측 하단
-            -1.0 + size.x * ratio.x, 1.0 - size.y * ratio.y, 0.0, color.x, color.y, color.z, color.w, // 3: 우측 하단
+            -1.0 + width * ratio.x, 1.0, 0.0, color.x, color.y, color.z, color.w, // 1: 우측 상단
+            -1.0, 1.0 - height * ratio.y, 0.0, color.x, color.y, color.z, color.w, // 2: 좌측 하단
+            -1.0 + width * ratio.x, 1.0 - height * ratio.y, 0.0, color.x, color.y, color.z, color.w, // 3: 우측 하단
 
             // 윈도우 테두리
             -1.0 - frame_size * ratio.x, 1.0 + frame_size * 5.0 * ratio.y, 0.0, frame_color.x, frame_color.y, frame_color.z, frame_color.w, // 4: 테두리 좌측 상단
-            -1.0 + (size.x + frame_size) * ratio.x, 1.0 + frame_size * 5.0 * ratio.y, 0.0, frame_color.x, frame_color.y, frame_color.z, frame_color.w, // 5: 테두리 우측 상단
-            -1.0 - frame_size * ratio.x, 1.0 - (size.y + frame_size) * ratio.y, 0.0, frame_color.x, frame_color.y, frame_color.z, frame_color.w, // 6: 테두리 좌측 하단
-            -1.0 + (size.x + frame_size) * ratio.x, 1.0 - (size.y + frame_size) * ratio.y, 0.0, frame_color.x, frame_color.y, frame_color.z, frame_color.w, // 7: 테두리 우측 하단
+            -1.0 + (width + frame_size) * ratio.x, 1.0 + frame_size * 5.0 * ratio.y, 0.0, frame_color.x, frame_color.y, frame_color.z, frame_color.w, // 5: 테두리 우측 상단
+            -1.0 - frame_size * ratio.x, 1.0 - (height + frame_size) * ratio.y, 0.0, frame_color.x, frame_color.y, frame_color.z, frame_color.w, // 6: 테두리 좌측 하단
+            -1.0 + (width + frame_size) * ratio.x, 1.0 - (height + frame_size) * ratio.y, 0.0, frame_color.x, frame_color.y, frame_color.z, frame_color.w, // 7: 테두리 우측 하단
         ];
         let indices: [u32; 12] = [
             // 윈도우 테두리
@@ -78,7 +80,7 @@ impl Window {
         let cursor_pos = glm::vec2(0.0, 0.0);
         let prev_cursor_pos = glm::vec2(0.0, 0.0);
 
-        Ok(Rc::new(RefCell::new(Self { id, moving: false, sizing: [false; 4], ratio, pos, size, color, frame_size, frame_color, vertices, indices, program, vao, vbo, ebo, total_objects: 0, objects, on_cursor_object, prev_on_cursor_object, cursor_pos, prev_cursor_pos })))
+        Ok(Rc::new(RefCell::new(Self { id, moving: false, sizing: [false; 4], ratio, pos, width, height, color, frame_size, frame_color, vertices, indices, program, vao, vbo, ebo, total_objects: 0, objects, on_cursor_object, prev_on_cursor_object, cursor_pos, prev_cursor_pos })))
     }
 
     pub fn add_object(&mut self) -> Result<Rc::<RefCell::<Object>>, errors::Error> {
@@ -120,7 +122,7 @@ impl Window {
 
         self.on_cursor_object = None;
         for (index, object) in self.objects.iter().enumerate().rev() {
-            if object.borrow().global_pos.x <= self.cursor_pos.x && self.cursor_pos.x <= object.borrow().global_pos.x + object.borrow().size.x && object.borrow().global_pos.y <= self.cursor_pos.y && self.cursor_pos.y <= object.borrow().global_pos.y + object.borrow().size.y {
+            if object.borrow().global_pos.x <= self.cursor_pos.x && self.cursor_pos.x <= object.borrow().global_pos.x + object.borrow().width && object.borrow().global_pos.y <= self.cursor_pos.y && self.cursor_pos.y <= object.borrow().global_pos.y + object.borrow().height {
                 self.on_cursor_object = Some(index);
                 break;
             }
@@ -163,10 +165,6 @@ impl Window {
         }
     }
 
-    pub fn get_size(&self) -> glm::Vec2 {
-        self.size
-    }
-
     pub fn set_pos(&mut self, x: f32, y: f32) -> &mut Self {
         self.pos.x = x;
         self.pos.y = y;
@@ -186,15 +184,15 @@ impl Window {
     }
 
     pub fn set_size(&mut self, width: f32, height: f32) -> &mut Self {
-        self.size.x = width;
-        self.size.y = height;
+        self.width = width;
+        self.height = height;
         self.reshape();
         self
     }
 
     pub fn add_size(&mut self, width: f32, height: f32) -> &mut Self {
-        self.size.x += width;
-        self.size.y += height;
+        self.width += width;
+        self.height += height;
         self.reshape();
         self
     }
@@ -231,20 +229,20 @@ impl Window {
 
     pub(super) fn reshape(&mut self) {
         // 윈도우 내용
-        self.vertices[7] = -1.0 + self.size.x * self.ratio.x;
-        self.vertices[15] = 1.0 - self.size.y * self.ratio.y;
-        self.vertices[21] = -1.0 + self.size.x * self.ratio.x;
-        self.vertices[22] = 1.0 - self.size.y * self.ratio.y;
+        self.vertices[7] = -1.0 + self.width * self.ratio.x;
+        self.vertices[15] = 1.0 - self.height * self.ratio.y;
+        self.vertices[21] = -1.0 + self.width * self.ratio.x;
+        self.vertices[22] = 1.0 - self.height * self.ratio.y;
 
         // 윈도우 테두리
         self.vertices[28] = -1.0 - self.frame_size * self.ratio.x;
         self.vertices[29] = 1.0 + self.frame_size * 5.0 * self.ratio.y;
-        self.vertices[35] = -1.0 + (self.size.x + self.frame_size) * self.ratio.x;
+        self.vertices[35] = -1.0 + (self.width + self.frame_size) * self.ratio.x;
         self.vertices[36] = 1.0 + self.frame_size * 5.0 * self.ratio.y;
         self.vertices[42] = -1.0 - self.frame_size * self.ratio.x;
-        self.vertices[43] = 1.0 - (self.size.y + self.frame_size) * self.ratio.y;
-        self.vertices[49] = -1.0 + (self.size.x + self.frame_size) * self.ratio.x;
-        self.vertices[50] = 1.0 - (self.size.y + self.frame_size) * self.ratio.y;
+        self.vertices[43] = 1.0 - (self.height + self.frame_size) * self.ratio.y;
+        self.vertices[49] = -1.0 + (self.width + self.frame_size) * self.ratio.x;
+        self.vertices[50] = 1.0 - (self.height + self.frame_size) * self.ratio.y;
 
         self.update();
 
@@ -267,16 +265,16 @@ impl Window {
     }
 
     pub(super) fn mouse_down(&mut self, cursor_pos: glm::Vec2) {
-        if self.pos.x + self.frame_size <= cursor_pos.x && cursor_pos.x < self.pos.x + self.frame_size + self.size.x && self.pos.y + self.frame_size <= cursor_pos.y && cursor_pos.y < self.pos.y + self.frame_size * 5.0 {
+        if self.pos.x + self.frame_size <= cursor_pos.x && cursor_pos.x < self.pos.x + self.frame_size + self.width && self.pos.y + self.frame_size <= cursor_pos.y && cursor_pos.y < self.pos.y + self.frame_size * 5.0 {
             self.moving = true;
         }
         if self.pos.y <= cursor_pos.y && cursor_pos.y < self.pos.y + self.frame_size {
             self.sizing[0] = true;
         }
-        if self.pos.x + self.frame_size + self.size.x <= cursor_pos.x && cursor_pos.x < self.pos.x + self.size.x + self.frame_size * 2.0 {
+        if self.pos.x + self.frame_size + self.width <= cursor_pos.x && cursor_pos.x < self.pos.x + self.width + self.frame_size * 2.0 {
             self.sizing[1] = true;
         }
-        if self.pos.y + self.frame_size * 5.0 + self.size.y <= cursor_pos.y && cursor_pos.y < self.pos.y + self.size.y + self.frame_size * 6.0 {
+        if self.pos.y + self.frame_size * 5.0 + self.height <= cursor_pos.y && cursor_pos.y < self.pos.y + self.height + self.frame_size * 6.0 {
             self.sizing[2] = true;
         }
         if self.pos.x <= cursor_pos.x && cursor_pos.x < self.pos.x + self.frame_size {

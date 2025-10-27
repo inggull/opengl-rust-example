@@ -65,59 +65,8 @@ fn inner_main() -> Result<(), errors::Error> {
     let mut ui_manager = Manager::create(WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32);
 
     let window_1 = ui_manager.add_window()?;
-    let window_2 = ui_manager.add_window()?;
-    let window_3 = ui_manager.add_window()?;
+    let object_1 = window_1.borrow_mut().set_pos(0.0, 0.0).set_frame_color(255, 192, 160, 255).set_color(255, 192, 160, 255).add_object()?;
 
-    window_1.borrow_mut().set_pos(0.0, 0.0).set_frame_color(128,224,255, 224).set_color(32, 32, 32, 255);
-    window_2.borrow_mut().set_pos(100.0, 100.0).set_frame_color(0,192,255, 224).set_color(32, 32, 32, 255);
-    window_3.borrow_mut().set_pos(200.0, 200.0).set_frame_color(32,128,255, 224).set_color(32, 32, 32, 255);
-
-    let button_1 = window_1.borrow_mut().add_object()?;
-    let button_2 = window_1.borrow_mut().add_object()?;
-    let button_3 = window_1.borrow_mut().add_object()?;
-
-    let window_1_size_x = window_1.borrow().get_size().x;
-    button_1.borrow_mut().set_loacl_pos(window_1_size_x + 6.0 - 48.0, 0.0).set_size(48.0, 24.0).set_color(192, 64, 64, 255);
-    button_2.borrow_mut().set_loacl_pos(window_1_size_x + 6.0 - 48.0 - 24.0, 0.0).set_size(24.0, 24.0).set_color(255, 255, 255, 0);
-    button_3.borrow_mut().set_loacl_pos(window_1_size_x + 6.0 - 48.0 - 24.0 - 24.0, 0.0).set_size(24.0, 24.0).set_color(255, 255, 255, 0);
-
-    let texture_1 = button_1.borrow_mut().add_object()?;
-    let texture_2 = button_2.borrow_mut().add_object()?;
-    let texture_3 = button_3.borrow_mut().add_object()?;
-
-    texture_1.borrow_mut().set_shader_type(ShaderType::Mix).set_texture(&close).set_size(16.0, 16.0).set_loacl_pos(16.0, 4.0).set_color(255, 255, 255, 255);
-    texture_2.borrow_mut().set_shader_type(ShaderType::Texture).set_texture(&maximize).set_size(16.0, 16.0).set_loacl_pos(4.0, 4.0).set_color(0, 0, 0, 255);
-    texture_3.borrow_mut().set_shader_type(ShaderType::Texture).set_texture(&minimize).set_size(16.0, 16.0).set_loacl_pos(4.0, 4.0).set_color(0, 0, 0, 255);
-
-    button_1.borrow_mut().set_mouse_on_event(|o| {
-        o.set_color(208, 32, 32, 255);
-    }).set_mouse_off_event(|o| {
-        o.set_color(192, 64, 64, 255);
-    }).set_mouse_down_event(|o| {
-        o.set_color(176, 32, 32, 255);
-    }).set_mouse_up_event(|o| {
-        o.set_color(208, 32, 32, 255);
-    });
-
-    button_2.borrow_mut().set_mouse_on_event(|o| {
-        o.set_color(255, 255, 255, 64);
-    }).set_mouse_off_event(|o| {
-        o.set_color(255, 255, 255, 0);
-    }).set_mouse_down_event(|o| {
-        o.set_color(0, 0, 0, 64);
-    }).set_mouse_up_event(|o| {
-        o.set_color(255, 255, 255, 64);
-    });
-
-    button_3.borrow_mut().set_mouse_on_event(|o| {
-        o.set_color(255, 255, 255, 64);
-    }).set_mouse_off_event(|o| {
-        o.set_color(255, 255, 255, 0);
-    }).set_mouse_down_event(|o| {
-        o.set_color(0, 0, 0, 64);
-    }).set_mouse_up_event(|o| {
-        o.set_color(255, 255, 255, 64);
-    });
 
     // Start main loop
     spdlog::info!("Start main loop");

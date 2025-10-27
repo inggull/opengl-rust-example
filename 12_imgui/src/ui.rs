@@ -64,8 +64,8 @@ impl Manager {
         // 윈도우 이동 및 크기 조정
         if self.windows.last().is_some() {
             let mut focused_window = self.windows[self.windows.len() - 1].borrow_mut();
-            let focused_window_size_x = focused_window.size.x;
-            let focused_window_size_y = focused_window.size.y;
+            let focused_window_size_x = focused_window.width;
+            let focused_window_size_y = focused_window.height;
             if focused_window.moving {
                 focused_window.add_pos(delta_pos.x, delta_pos.y);
             }
@@ -105,7 +105,7 @@ impl Manager {
 
         self.on_cursor_window = None;
         for (index, mut window) in self.windows.iter().map(|w|{ w.borrow_mut() }).enumerate().rev() {
-            if window.pos.x <= self.cursor_pos.x && self.cursor_pos.x <= window.pos.x + (window.size.x + window.frame_size * 2.0) && window.pos.y <= self.cursor_pos.y && self.cursor_pos.y <= window.pos.y + (window.size.y + window.frame_size * 6.0) {
+            if window.pos.x <= self.cursor_pos.x && self.cursor_pos.x <= window.pos.x + (window.width + window.frame_size * 2.0) && window.pos.y <= self.cursor_pos.y && self.cursor_pos.y <= window.pos.y + (window.height + window.frame_size * 6.0) {
                 self.on_cursor_window = Some(index);
                 window.on_cursor_pos_event(x, y);
                 break;
