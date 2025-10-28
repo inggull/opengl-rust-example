@@ -16,6 +16,7 @@ impl VertexArray {
 
     pub fn set(&self, index: u32, size: i32, type_: u32, normalized: u8, stride: i32, offset: *const std::ffi::c_void) {
         unsafe {
+            gl::BindVertexArray(self.vertex_array);
             gl::EnableVertexAttribArray(index);
             gl::VertexAttribPointer(index, size, type_, normalized, stride, offset);
         }

@@ -10,11 +10,10 @@ mod image;
 mod ui;
 
 use glfw::Context;
-use ui::{Manager, window::Window, object::{ShaderType, Object}};
 
 const WINDOW_NAME: &'static str = "ImGui";
-const WINDOW_WIDTH: u32 = 640;
-const WINDOW_HEIGHT: u32 = 480;
+const WINDOW_WIDTH: u32 = 1920;
+const WINDOW_HEIGHT: u32 = 1080;
 
 fn main() -> errors::Result<(), errors::Error> {
     inner_main().into()
@@ -55,18 +54,9 @@ fn inner_main() -> Result<(), errors::Error> {
 
     let mut context = context::Context::create()?;
 
-    let close = image::Image::load("resources/images/close.png")?;
-    spdlog::info!("Loaded image file \"resources/images/close.png\" ({} x {}, {} channels)", close.get_width(), close.get_height(), close.get_channel_count());
-    let maximize = image::Image::load("resources/images/maximize.png")?;
-    spdlog::info!("Loaded image file \"resources/images/maximize.png\" ({} x {}, {} channels)", maximize.get_width(), maximize.get_height(), maximize.get_channel_count());
-    let minimize = image::Image::load("resources/images/minimize.png")?;
-    spdlog::info!("Loaded image file \"resources/images/minimize.png\" ({} x {}, {} channels)", minimize.get_width(), minimize.get_height(), minimize.get_channel_count());
-
-    let mut ui_manager = Manager::create(WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32);
-
-    let window_1 = ui_manager.add_window()?;
-    let object_1 = window_1.borrow_mut().set_pos(0.0, 0.0).set_frame_color(255, 192, 160, 255).set_color(255, 192, 160, 255).add_object()?;
-
+    let mut ui_manager = ui::Manager::create(WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
+    let ui_window_1 = ui_manager.add_window()?;
+    let ui_window_2 = ui_manager.add_window()?;
 
     // Start main loop
     spdlog::info!("Start main loop");
