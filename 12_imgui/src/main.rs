@@ -55,8 +55,9 @@ fn inner_main() -> Result<(), errors::Error> {
     let mut context = context::Context::create()?;
 
     let mut ui_manager = ui::Manager::create(WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32)?;
-    let ui_window_1 = ui_manager.add_window()?;
-    let ui_window_2 = ui_manager.add_window()?;
+    let ui_window_1 = ui_manager.add_window("window 1")?;
+    let ui_window_2 = ui_manager.add_window("window 2")?;
+    let ui_window_3 = ui_manager.add_window("window 3")?;
 
     // Start main loop
     spdlog::info!("Start main loop");
@@ -90,7 +91,7 @@ fn inner_main() -> Result<(), errors::Error> {
                 glfw::WindowEvent::CursorPos(x, y) => {
                     ui_manager.on_cursor_pos_event(x as f32, y as f32);
                     context.on_cursor_pos_event(x as f32, y as f32);
-                    on_cursor_pos_event(&mut window, x, y);
+                    // on_cursor_pos_event(&mut window, x, y);
                 }
                 glfw::WindowEvent::MouseButton(mouse_button, action, modifiers) => {
                     if mouse_button == glfw::MouseButtonLeft {

@@ -1,46 +1,18 @@
 use crate::{buffer::Buffer, errors, image::Image, program::Program, shader::Shader, texture::Texture, vertex_array::VertexArray};
 
 use nalgebra_glm as glm;
-use std::{rc::Rc, cell::RefCell};
-
-#[derive(PartialEq, Eq)]
-pub enum ShaderType {
-    Color,
-    Texture,
-    Mix,
-}
-
-#[derive(Clone, Copy)]
-pub struct Color {
-    r: f32,
-    g: f32,
-    b: f32,
-    a: f32,
-}
-
-impl Color {
-    pub fn from(r: f32, g: f32, b: f32, a: f32) -> Self {
-        Self { r, g, b, a }
-    }
-    pub fn from_u8(r: u8, g: u8, b: u8, a: u8) -> Self {
-        Self { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a: a as f32 / 255.0 }
-    }
-}
-
-struct Border {
-    size: [f32; 4],
-    color: [Color; 4],
-}
+use std::{cell::RefCell, rc::Rc};
 
 pub struct Object {
-    // object
-    pub objects: Vec<Rc<RefCell<Object>>>,
-    pub total_objects: usize,
-    pub on_cursor_object: Option<usize>,
-    pub prev_on_cursor_object: Option<usize>,
+    // child
+    pub children: Vec<Rc<RefCell<Self>>>,
+    pub total_children: usize,
+    pub on_cursor_child: Option<usize>,
+    pub prev_on_cursor_child: Option<usize>,
 
     // property
     pub id: usize,
+    pub name: String,
     pub ratio: glm::Vec2,
     pub width: f32,
     pub height: f32,
@@ -50,7 +22,6 @@ pub struct Object {
     pub background_color: Color,
     pub padding: [f32; 4],
     pub border: Border,
-    pub margin: [f32; 4],
 
     // shader
     pub vertices_border: [f32; 112],
@@ -74,6 +45,7 @@ pub struct Object {
     pub moving: bool,
     pub sizing: [bool; 4],
     pub pressed: bool,
+    pub closed: bool,
     pub mouse_on_event: Rc<RefCell<dyn FnMut(&mut Self)>>,
     pub mouse_off_event: Rc<RefCell<dyn FnMut(&mut Self)>>,
     pub mouse_down_event: Rc<RefCell<dyn FnMut(&mut Self)>>,
@@ -81,14 +53,15 @@ pub struct Object {
 }
 
 impl Object {
-    pub fn create(id: usize, ratio: glm::Vec2) -> Result<Rc<RefCell<Self>>, errors::Error> {
-        // object
-        let objects = Vec::new();
-        let total_objects = 0;
-        let on_cursor_object = None;
-        let prev_on_cursor_object = None;
+    pub fn create(id: usize, name: &str, ratio: glm::Vec2) -> Result<Rc<RefCell<Self>>, errors::Error> {
+        // children
+        let children = Vec::new();
+        let total_children = 0;
+        let on_cursor_child = None;
+        let prev_on_cursor_child = None;
 
         // property
+        let name = name.to_owned();
         let local_pos = glm::vec2(0.0, 0.0);
         let base_pos = glm::vec2(0.0, 0.0);
         let global_pos = base_pos + local_pos;
@@ -96,8 +69,7 @@ impl Object {
         let height = 0.0;
         let background_color = Color::from(1.0, 1.0, 1.0, 1.0);
         let padding = [0.0; 4];
-        let border = Border { size: [0.0; 4], color: [Color::from(1.0, 1.0, 1.0, 1.0); 4] };
-        let margin = [0.0; 4];
+        let border = Border::new();
 
         // shader
         // border top left: [-1.0, 1.0, 0.0];
@@ -105,48 +77,48 @@ impl Object {
         // border bottom left: [-1.0, 1.0 - height * ratio.y, 0.0];
         // border bottom right: [-1.0 + width * ratio.x, 1.0 - height * ratio.y, 0.0];
 
-        // padding top left: [-1.0 + border.size[3] * ratio.x, 1.0 - border.size[0] * ratio.y, 0.0];
-        // padding top right: [-1.0 + (width - border.size[1]) * ratio.x, 1.0 - border.size[0] * ratio.y, 0.0];
-        // padding bottom left: [-1.0 + border.size[3] * ratio.x, 1.0 - (height - border.size[2]) * ratio.y, 0.0];
-        // padding bottom right: [-1.0 + (width - border.size[1]) * ratio.x, 1.0 - (height - border.size[2]) * ratio.y, 0.0];
+        // padding top left: [-1.0 + border.left.0 * ratio.x, 1.0 - border.top.0 * ratio.y, 0.0];
+        // padding top right: [-1.0 + (width - border.right.0) * ratio.x, 1.0 - border.top.0 * ratio.y, 0.0];
+        // padding bottom left: [-1.0 + border.left.0 * ratio.x, 1.0 - (height - border.bottom.0) * ratio.y, 0.0];
+        // padding bottom right: [-1.0 + (width - border.right.0) * ratio.x, 1.0 - (height - border.bottom.0) * ratio.y, 0.0];
 
-        // content top left: [-1.0 + (border.size[3] + padding[3]) * ratio.x, 1.0 - (border.size[0] + padding[0]) * ratio.y, 0.0];
-        // content top right: [-1.0 + (width - (border.size[1] + padding[1])) * ratio.x, 1.0 - (border.size[0] + padding[0]) * ratio.y, 0.0];
-        // content bottom left: [-1.0 + (border.size[3] + padding[3]) * ratio.x, 1.0 - (height - (border.size[2] + padding[2])) * ratio.y, 0.0];
-        // content bottom right: [-1.0 + (width - (border.size[1] + padding[1])) * ratio.x, 1.0 - (height - (border.size[2] + padding[2])) * ratio.y, 0.0];
+        // content top left: [-1.0 + (border.left.0 + padding[3]) * ratio.x, 1.0 - (border.top.0 + padding[0]) * ratio.y, 0.0];
+        // content top right: [-1.0 + (width - (border.right.0 + padding[1])) * ratio.x, 1.0 - (border.top.0 + padding[0]) * ratio.y, 0.0];
+        // content bottom left: [-1.0 + (border.left.0 + padding[3]) * ratio.x, 1.0 - (height - (border.bottom.0 + padding[2])) * ratio.y, 0.0];
+        // content bottom right: [-1.0 + (width - (border.right.0 + padding[1])) * ratio.x, 1.0 - (height - (border.bottom.0 + padding[2])) * ratio.y, 0.0];
 
         let vertices_border: [f32; 112] = [
             // border top
-            -1.0, 1.0, 0.0, border.color[0].r, border.color[0].g, border.color[0].b, border.color[0].a,
-            -1.0 + width * ratio.x, 1.0, 0.0, border.color[0].r, border.color[0].g, border.color[0].b, border.color[0].a,
-            -1.0 + border.size[3] * ratio.x, 1.0 - border.size[0] * ratio.y, 0.0, border.color[0].r, border.color[0].g, border.color[0].b, border.color[0].a,
-            -1.0 + (width - border.size[1]) * ratio.x, 1.0 - border.size[0] * ratio.y, 0.0, border.color[0].r, border.color[0].g, border.color[0].b, border.color[0].a,
+            -1.0, 1.0, 0.0, border.top.1.r, border.top.1.g, border.top.1.b, border.top.1.a,
+            -1.0 + width * ratio.x, 1.0, 0.0, border.top.1.r, border.top.1.g, border.top.1.b, border.top.1.a,
+            -1.0 + border.left.0 * ratio.x, 1.0 - border.top.0 * ratio.y, 0.0, border.top.1.r, border.top.1.g, border.top.1.b, border.top.1.a,
+            -1.0 + (width - border.right.0) * ratio.x, 1.0 - border.top.0 * ratio.y, 0.0, border.top.1.r, border.top.1.g, border.top.1.b, border.top.1.a,
 
             // border right
-            -1.0 + (width - border.size[1]) * ratio.x, 1.0 - border.size[0] * ratio.y, 0.0, border.color[1].r, border.color[1].g, border.color[1].b, border.color[1].a,
-            -1.0 + width * ratio.x, 1.0, 0.0, border.color[1].r, border.color[1].g, border.color[1].b, border.color[1].a,
-            -1.0 + (width - border.size[1]) * ratio.x, 1.0 - (height - border.size[2]) * ratio.y, 0.0, border.color[1].r, border.color[1].g, border.color[1].b, border.color[1].a,
-            -1.0 + width * ratio.x, 1.0 - height * ratio.y, 0.0, border.color[1].r, border.color[1].g, border.color[1].b, border.color[1].a,
+            -1.0 + (width - border.right.0) * ratio.x, 1.0 - border.top.0 * ratio.y, 0.0, border.right.1.r, border.right.1.g, border.right.1.b, border.right.1.a,
+            -1.0 + width * ratio.x, 1.0, 0.0, border.right.1.r, border.right.1.g, border.right.1.b, border.right.1.a,
+            -1.0 + (width - border.right.0) * ratio.x, 1.0 - (height - border.bottom.0) * ratio.y, 0.0, border.right.1.r, border.right.1.g, border.right.1.b, border.right.1.a,
+            -1.0 + width * ratio.x, 1.0 - height * ratio.y, 0.0, border.right.1.r, border.right.1.g, border.right.1.b, border.right.1.a,
 
             // border bottom
-            -1.0 + border.size[3] * ratio.x, 1.0 - (height - border.size[2]) * ratio.y, 0.0, border.color[2].r, border.color[2].g, border.color[2].b, border.color[2].a,
-            -1.0 + (width - border.size[1]) * ratio.x, 1.0 - (height - border.size[2]) * ratio.y, 0.0, border.color[2].r, border.color[2].g, border.color[2].b, border.color[2].a,
-            -1.0, 1.0 - height * ratio.y, 0.0, border.color[2].r, border.color[2].g, border.color[2].b, border.color[2].a,
-            -1.0 + width * ratio.x, 1.0 - height * ratio.y, 0.0, border.color[2].r, border.color[2].g, border.color[2].b, border.color[2].a,
+            -1.0 + border.left.0 * ratio.x, 1.0 - (height - border.bottom.0) * ratio.y, 0.0, border.bottom.1.r, border.bottom.1.g, border.bottom.1.b, border.bottom.1.a,
+            -1.0 + (width - border.right.0) * ratio.x, 1.0 - (height - border.bottom.0) * ratio.y, 0.0, border.bottom.1.r, border.bottom.1.g, border.bottom.1.b, border.bottom.1.a,
+            -1.0, 1.0 - height * ratio.y, 0.0, border.bottom.1.r, border.bottom.1.g, border.bottom.1.b, border.bottom.1.a,
+            -1.0 + width * ratio.x, 1.0 - height * ratio.y, 0.0, border.bottom.1.r, border.bottom.1.g, border.bottom.1.b, border.bottom.1.a,
 
             // border left
-            -1.0, 1.0, 0.0, border.color[3].r, border.color[3].g, border.color[3].b, border.color[3].a,
-            -1.0 + border.size[3] * ratio.x, 1.0 - border.size[0] * ratio.y, 0.0, border.color[3].r, border.color[3].g, border.color[3].b, border.color[3].a,
-            -1.0, 1.0 - height * ratio.y, 0.0, border.color[3].r, border.color[3].g, border.color[3].b, border.color[3].a,
-            -1.0 + border.size[3] * ratio.x, 1.0 - (height - border.size[2]) * ratio.y, 0.0, border.color[3].r, border.color[3].g, border.color[3].b, border.color[3].a,
+            -1.0, 1.0, 0.0, border.left.1.r, border.left.1.g, border.left.1.b, border.left.1.a,
+            -1.0 + border.left.0 * ratio.x, 1.0 - border.top.0 * ratio.y, 0.0, border.left.1.r, border.left.1.g, border.left.1.b, border.left.1.a,
+            -1.0, 1.0 - height * ratio.y, 0.0, border.left.1.r, border.left.1.g, border.left.1.b, border.left.1.a,
+            -1.0 + border.left.0 * ratio.x, 1.0 - (height - border.bottom.0) * ratio.y, 0.0, border.left.1.r, border.left.1.g, border.left.1.b, border.left.1.a,
         ];
 
         let vertices_content: [f32; 36] = [
             // content
-            -1.0 + (border.size[3] + padding[3]) * ratio.x, 1.0 - (border.size[0] + padding[0]) * ratio.y, 0.0, background_color.r, background_color.g, background_color.b, background_color.a, 0.0, 1.0,
-            -1.0 + (width - (border.size[1] + padding[1])) * ratio.x, 1.0 - (border.size[0] + padding[0]) * ratio.y, 0.0, background_color.r, background_color.g, background_color.b, background_color.a, 1.0, 1.0,
-            -1.0 + (border.size[3] + padding[3]) * ratio.x, 1.0 - (height - (border.size[2] + padding[2])) * ratio.y, 0.0, background_color.r, background_color.g, background_color.b, background_color.a, 0.0, 0.0,
-            -1.0 + (width - (border.size[1] + padding[1])) * ratio.x, 1.0 - (height - (border.size[2] + padding[2])) * ratio.y, 0.0, background_color.r, background_color.g, background_color.b, background_color.a, 1.0, 0.0,
+            -1.0 + (border.left.0 + padding[3]) * ratio.x, 1.0 - (border.top.0 + padding[0]) * ratio.y, 0.0, background_color.r, background_color.g, background_color.b, background_color.a, 0.0, 1.0,
+            -1.0 + (width - (border.right.0 + padding[1])) * ratio.x, 1.0 - (border.top.0 + padding[0]) * ratio.y, 0.0, background_color.r, background_color.g, background_color.b, background_color.a, 1.0, 1.0,
+            -1.0 + (border.left.0 + padding[3]) * ratio.x, 1.0 - (height - (border.bottom.0 + padding[2])) * ratio.y, 0.0, background_color.r, background_color.g, background_color.b, background_color.a, 0.0, 0.0,
+            -1.0 + (width - (border.right.0 + padding[1])) * ratio.x, 1.0 - (height - (border.bottom.0 + padding[2])) * ratio.y, 0.0, background_color.r, background_color.g, background_color.b, background_color.a, 1.0, 0.0,
         ];
 
         let indices_border: [u32; 24] = [
@@ -173,8 +145,8 @@ impl Object {
             1, 2, 3,
         ];
 
-        let vertex_shader = Shader::create("shader/ui_object.vert", gl::VERTEX_SHADER)?;
-        let fragment_shader = Shader::create("shader/ui_object.frag", gl::FRAGMENT_SHADER)?;
+        let vertex_shader = Shader::create("shader/ui.vert", gl::VERTEX_SHADER)?;
+        let fragment_shader = Shader::create("shader/ui.frag", gl::FRAGMENT_SHADER)?;
         spdlog::info!("Created vertex shader({})", vertex_shader.get());
         spdlog::info!("Created fragment shader({})", fragment_shader.get());
         let program = Program::create(vec![&vertex_shader, &fragment_shader])?;
@@ -195,6 +167,9 @@ impl Object {
         vao_content.set(0, 3, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 9) as i32, (size_of::<f32>() * 0) as *const _);
         vao_content.set(1, 4, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 9) as i32, (size_of::<f32>() * 3) as *const _);
 
+        let shader_type = ShaderType::Color;
+        let tbo = None;
+
         // event
         let cursor_pos = glm::vec2(0.0, 0.0);
         let prev_cursor_pos = glm::vec2(0.0, 0.0);
@@ -202,51 +177,38 @@ impl Object {
         let moving = false;
         let sizing = [false; 4];
         let pressed = false;
+        let closed = false;
         let mouse_on_event = Rc::new(RefCell::new(|_: &mut Self| {}));
         let mouse_off_event = Rc::new(RefCell::new(|_: &mut Self| {}));
         let mouse_down_event = Rc::new(RefCell::new(|_: &mut Self| {}));
         let mouse_up_event = Rc::new(RefCell::new(|_: &mut Self| {}));
 
-        Ok(Rc::new(RefCell::new(Self { objects, total_objects, on_cursor_object, prev_on_cursor_object, id, ratio, width, height, local_pos, base_pos, global_pos, background_color, padding, border, margin,
-            vertices_border, vertices_content, indices_border, indices_content, program, vao_border, vao_content, vbo_border, vbo_content, ebo_border, ebo_content, shader_type: ShaderType::Color, tbo: None,
-            cursor_pos, prev_cursor_pos, hiding, moving, sizing, pressed, mouse_on_event, mouse_off_event, mouse_down_event, mouse_up_event })))
+        Ok(Rc::new(RefCell::new(Self { children, total_children, on_cursor_child, prev_on_cursor_child, id, ratio, width, height, name, local_pos, base_pos, global_pos, background_color, padding, border,
+            vertices_border, vertices_content, indices_border, indices_content, program, vao_border, vao_content, vbo_border, vbo_content, ebo_border, ebo_content, shader_type, tbo,
+            cursor_pos, prev_cursor_pos, hiding, moving, sizing, pressed, closed, mouse_on_event, mouse_off_event, mouse_down_event, mouse_up_event })))
     }
 
-    pub fn add_object(&mut self) -> Result<Rc::<RefCell::<Object>>, errors::Error> {
-        let object = Object::create(self.total_objects, self.ratio)?;
-        object.borrow_mut().set_base_pos(Some(self.global_pos.x), Some(self.global_pos.y));
-        self.objects.push(object.clone());
-        self.total_objects += 1;
-        Ok(object)
+    pub fn add_child(&mut self, name: &str) -> Result<Rc::<RefCell::<Self>>, errors::Error> {
+        let child = Self::create(self.total_children, name, self.ratio)?;
+        child.borrow_mut().set_base_pos(Some(self.global_pos.x), Some(self.global_pos.y));
+        self.children.push(child.clone());
+        self.total_children += 1;
+        Ok(child)
     }
 
-    pub fn delete_object(&mut self, id: usize) -> &mut Self {
-        let mut target_index = None;
-        for (index, object) in self.objects.iter().map(|object|{ object.borrow() }).enumerate() {
-            if object.id == id {
-                target_index = Some(index);
-            }
-        }
-        if let Some(target_index) = target_index {
-            self.objects.remove(target_index);
-            self.total_objects -= 1;
-        }
-        self
-    }
-
-    pub fn set_loacl_pos(&mut self, x: Option<f32>, y: Option<f32>) -> &mut Self {
+    pub fn set_local_pos(&mut self, x: Option<f32>, y: Option<f32>) -> &mut Self {
         if let Some(x) = x {
             self.local_pos.x = x;
             self.global_pos.x = self.base_pos.x + self.local_pos.x;
-            for object in &self.objects {
-                object.borrow_mut().set_base_pos(Some(self.global_pos.x), None);
+            for child in &self.children {
+                child.borrow_mut().set_base_pos(Some(self.global_pos.x), None);
             }
         }
         if let Some(y) = y {
             self.local_pos.y = y;
             self.global_pos.y = self.base_pos.y + self.local_pos.y;
-            for object in &self.objects {
-                object.borrow_mut().set_base_pos(None, Some(self.global_pos.y));
+            for child in &self.children {
+                child.borrow_mut().set_base_pos(None, Some(self.global_pos.y));
             }
         }
         self
@@ -256,15 +218,15 @@ impl Object {
         if let Some(x) = x {
             self.base_pos.x = x;
             self.global_pos.x = self.base_pos.x + self.local_pos.x;
-            for object in &self.objects {
-                object.borrow_mut().set_base_pos(Some(self.global_pos.x), None);
+            for child in &self.children {
+                child.borrow_mut().set_base_pos(Some(self.global_pos.x), None);
             }
         }
         if let Some(y) = y {
             self.base_pos.y = y;
             self.global_pos.y = self.base_pos.y + self.local_pos.y;
-            for object in &self.objects {
-                object.borrow_mut().set_base_pos(None, Some(self.global_pos.y));
+            for child in &self.children {
+                child.borrow_mut().set_base_pos(None, Some(self.global_pos.y));
             }
         }
         self
@@ -279,26 +241,26 @@ impl Object {
         }
         // border
         self.vertices_border[7] = -1.0 + self.width * self.ratio.x;
-        self.vertices_border[21] = -1.0 + (self.width - self.border.size[1]) * self.ratio.x;
-        self.vertices_border[28] = -1.0 + (self.width - self.border.size[1]) * self.ratio.x;
+        self.vertices_border[21] = -1.0 + (self.width - self.border.right.0) * self.ratio.x;
+        self.vertices_border[28] = -1.0 + (self.width - self.border.right.0) * self.ratio.x;
         self.vertices_border[35] = -1.0 + self.width * self.ratio.x;
-        self.vertices_border[42] = -1.0 + (self.width - self.border.size[1]) * self.ratio.x;
-        self.vertices_border[43] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
+        self.vertices_border[42] = -1.0 + (self.width - self.border.right.0) * self.ratio.x;
+        self.vertices_border[43] = 1.0 - (self.height - self.border.bottom.0) * self.ratio.y;
         self.vertices_border[49] = -1.0 + self.width * self.ratio.x;
         self.vertices_border[50] = 1.0 - self.height * self.ratio.y;
-        self.vertices_border[57] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
-        self.vertices_border[63] = -1.0 + (self.width - self.border.size[1]) * self.ratio.x;
-        self.vertices_border[64] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
+        self.vertices_border[57] = 1.0 - (self.height - self.border.bottom.0) * self.ratio.y;
+        self.vertices_border[63] = -1.0 + (self.width - self.border.right.0) * self.ratio.x;
+        self.vertices_border[64] = 1.0 - (self.height - self.border.bottom.0) * self.ratio.y;
         self.vertices_border[71] = 1.0 - self.height * self.ratio.y;
         self.vertices_border[77] = -1.0 + self.width * self.ratio.x;
         self.vertices_border[78] = 1.0 - self.height * self.ratio.y;
         self.vertices_border[99] = 1.0 - self.height * self.ratio.y;
-        self.vertices_border[106] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
+        self.vertices_border[106] = 1.0 - (self.height - self.border.bottom.0) * self.ratio.y;
         // content
-        self.vertices_content[9] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
-        self.vertices_content[19] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
-        self.vertices_content[27] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
-        self.vertices_content[28] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
+        self.vertices_content[9] = -1.0 + (self.width - (self.border.right.0 + self.padding[1])) * self.ratio.x;
+        self.vertices_content[19] = 1.0 - (self.height - (self.border.bottom.0 + self.padding[2])) * self.ratio.y;
+        self.vertices_content[27] = -1.0 + (self.width - (self.border.right.0 + self.padding[1])) * self.ratio.x;
+        self.vertices_content[28] = 1.0 - (self.height - (self.border.bottom.0 + self.padding[2])) * self.ratio.y;
         self.vao_border.bind();
         self.vbo_border.set(gl::ARRAY_BUFFER, size_of_val(&self.vertices_border).cast_signed(), self.vertices_border.as_ptr().cast(), gl::STATIC_DRAW);
         self.vao_content.bind();
@@ -319,45 +281,37 @@ impl Object {
         self
     }
 
-    pub fn set_margin(&mut self, top: Option<f32>, right: Option<f32>, bottom: Option<f32>, left: Option<f32>) -> &mut Self {
-        if let Some(top) = top { self.margin[0] = top; };
-        if let Some(right) = right { self.margin[1] = right; };
-        if let Some(bottom) = bottom { self.margin[2] = bottom; };
-        if let Some(left) = left { self.margin[3] = left; };
-        self
-    }
-
     pub fn set_border_size(&mut self, top: Option<f32>, right: Option<f32>, bottom: Option<f32>, left: Option<f32>) -> &mut Self {
-        if let Some(top) = top {self.border.size[0] = top; };
-        if let Some(right) = right { self.border.size[1] = right; };
-        if let Some(bottom) = bottom { self.border.size[2] = bottom; };
-        if let Some(left) = left { self.border.size[3] = left; };
+        if let Some(top) = top {self.border.top.0 = top; };
+        if let Some(right) = right { self.border.right.0 = right; };
+        if let Some(bottom) = bottom { self.border.bottom.0 = bottom; };
+        if let Some(left) = left { self.border.left.0 = left; };
         // border
-        self.vertices_border[14] = -1.0 + self.border.size[3] * self.ratio.x;
-        self.vertices_border[15] = 1.0 - self.border.size[0] * self.ratio.y;
-        self.vertices_border[21] = -1.0 + (self.width - self.border.size[1]) * self.ratio.x;
-        self.vertices_border[22] = 1.0 - self.border.size[0] * self.ratio.y;
-        self.vertices_border[28] = -1.0 + (self.width - self.border.size[1]) * self.ratio.x;
-        self.vertices_border[29] = 1.0 - self.border.size[0] * self.ratio.y;
-        self.vertices_border[42] = -1.0 + (self.width - self.border.size[1]) * self.ratio.x;
-        self.vertices_border[43] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
-        self.vertices_border[56] = -1.0 + self.border.size[3] * self.ratio.x;
-        self.vertices_border[57] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
-        self.vertices_border[63] = -1.0 + (self.width - self.border.size[1]) * self.ratio.x;
-        self.vertices_border[64] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
-        self.vertices_border[91] = -1.0 + self.border.size[3] * self.ratio.x;
-        self.vertices_border[92] = 1.0 - self.border.size[0] * self.ratio.y;
-        self.vertices_border[105] = -1.0 + self.border.size[3] * self.ratio.x;
-        self.vertices_border[106] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
+        self.vertices_border[14] = -1.0 + self.border.left.0 * self.ratio.x;
+        self.vertices_border[15] = 1.0 - self.border.top.0 * self.ratio.y;
+        self.vertices_border[21] = -1.0 + (self.width - self.border.right.0) * self.ratio.x;
+        self.vertices_border[22] = 1.0 - self.border.top.0 * self.ratio.y;
+        self.vertices_border[28] = -1.0 + (self.width - self.border.right.0) * self.ratio.x;
+        self.vertices_border[29] = 1.0 - self.border.top.0 * self.ratio.y;
+        self.vertices_border[42] = -1.0 + (self.width - self.border.right.0) * self.ratio.x;
+        self.vertices_border[43] = 1.0 - (self.height - self.border.bottom.0) * self.ratio.y;
+        self.vertices_border[56] = -1.0 + self.border.left.0 * self.ratio.x;
+        self.vertices_border[57] = 1.0 - (self.height - self.border.bottom.0) * self.ratio.y;
+        self.vertices_border[63] = -1.0 + (self.width - self.border.right.0) * self.ratio.x;
+        self.vertices_border[64] = 1.0 - (self.height - self.border.bottom.0) * self.ratio.y;
+        self.vertices_border[91] = -1.0 + self.border.left.0 * self.ratio.x;
+        self.vertices_border[92] = 1.0 - self.border.top.0 * self.ratio.y;
+        self.vertices_border[105] = -1.0 + self.border.left.0 * self.ratio.x;
+        self.vertices_border[106] = 1.0 - (self.height - self.border.bottom.0) * self.ratio.y;
         // content
-        self.vertices_content[0] = -1.0 + (self.border.size[3] + self.padding[3]) * self.ratio.x;
-        self.vertices_content[1] = 1.0 - (self.border.size[0] + self.padding[0]) * self.ratio.y;
-        self.vertices_content[9] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
-        self.vertices_content[10] = 1.0 - (self.border.size[0] + self.padding[0]) * self.ratio.y;
-        self.vertices_content[18] = -1.0 + (self.border.size[3] + self.padding[3]) * self.ratio.x;
-        self.vertices_content[19] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
-        self.vertices_content[27] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
-        self.vertices_content[28] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
+        self.vertices_content[0] = -1.0 + (self.border.left.0 + self.padding[3]) * self.ratio.x;
+        self.vertices_content[1] = 1.0 - (self.border.top.0 + self.padding[0]) * self.ratio.y;
+        self.vertices_content[9] = -1.0 + (self.width - (self.border.right.0 + self.padding[1])) * self.ratio.x;
+        self.vertices_content[10] = 1.0 - (self.border.top.0 + self.padding[0]) * self.ratio.y;
+        self.vertices_content[18] = -1.0 + (self.border.left.0 + self.padding[3]) * self.ratio.x;
+        self.vertices_content[19] = 1.0 - (self.height - (self.border.bottom.0 + self.padding[2])) * self.ratio.y;
+        self.vertices_content[27] = -1.0 + (self.width - (self.border.right.0 + self.padding[1])) * self.ratio.x;
+        self.vertices_content[28] = 1.0 - (self.height - (self.border.bottom.0 + self.padding[2])) * self.ratio.y;
         self.vao_border.bind();
         self.vbo_border.set(gl::ARRAY_BUFFER, size_of_val(&self.vertices_border).cast_signed(), self.vertices_border.as_ptr().cast(), gl::STATIC_DRAW);
         self.vao_content.bind();
@@ -367,7 +321,7 @@ impl Object {
 
     pub fn set_border_color(&mut self, top: Option<Color>, right: Option<Color>, bottom: Option<Color>, left: Option<Color>) -> &mut Self {
         if let Some(top) = top {
-            self.border.color[0] = top;
+            self.border.top.1 = top;
             for i in 0..4 {
                 self.vertices_border[i * 7 + 3] = top.r;
                 self.vertices_border[i * 7 + 4] = top.g;
@@ -376,7 +330,7 @@ impl Object {
             }
         };
         if let Some(right) = right {
-            self.border.color[1] = right;
+            self.border.right.1 = right;
             for i in 4..8 {
                 self.vertices_border[i * 7 + 3] = right.r;
                 self.vertices_border[i * 7 + 4] = right.g;
@@ -385,7 +339,7 @@ impl Object {
             }
         };
         if let Some(bottom) = bottom {
-            self.border.color[2] = bottom;
+            self.border.bottom.1 = bottom;
             for i in 8..12 {
                 self.vertices_border[i * 7 + 3] = bottom.r;
                 self.vertices_border[i * 7 + 4] = bottom.g;
@@ -394,7 +348,7 @@ impl Object {
             }
         };
         if let Some(left) = left {
-            self.border.color[3] = left;
+            self.border.left.1 = left;
             for i in 12..16 {
                 self.vertices_border[i * 7 + 3] = left.r;
                 self.vertices_border[i * 7 + 4] = left.g;
@@ -413,14 +367,14 @@ impl Object {
         if let Some(bottom) = bottom { self.padding[2] = bottom; };
         if let Some(left) = left { self.padding[3] = left; };
         // content
-        self.vertices_content[0] = -1.0 + (self.border.size[3] + self.padding[3]) * self.ratio.x;
-        self.vertices_content[1] = 1.0 - (self.border.size[0] + self.padding[0]) * self.ratio.y;
-        self.vertices_content[9] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
-        self.vertices_content[10] = 1.0 - (self.border.size[0] + self.padding[0]) * self.ratio.y;
-        self.vertices_content[18] = -1.0 + (self.border.size[3] + self.padding[3]) * self.ratio.x;
-        self.vertices_content[19] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
-        self.vertices_content[27] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
-        self.vertices_content[28] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
+        self.vertices_content[0] = -1.0 + (self.border.left.0 + self.padding[3]) * self.ratio.x;
+        self.vertices_content[1] = 1.0 - (self.border.top.0 + self.padding[0]) * self.ratio.y;
+        self.vertices_content[9] = -1.0 + (self.width - (self.border.right.0 + self.padding[1])) * self.ratio.x;
+        self.vertices_content[10] = 1.0 - (self.border.top.0 + self.padding[0]) * self.ratio.y;
+        self.vertices_content[18] = -1.0 + (self.border.left.0 + self.padding[3]) * self.ratio.x;
+        self.vertices_content[19] = 1.0 - (self.height - (self.border.bottom.0 + self.padding[2])) * self.ratio.y;
+        self.vertices_content[27] = -1.0 + (self.width - (self.border.right.0 + self.padding[1])) * self.ratio.x;
+        self.vertices_content[28] = 1.0 - (self.height - (self.border.bottom.0 + self.padding[2])) * self.ratio.y;
         self.vao_content.bind();
         self.vbo_content.set(gl::ARRAY_BUFFER, size_of_val(&self.vertices_content).cast_signed(), self.vertices_content.as_ptr().cast(), gl::STATIC_DRAW);
         self
@@ -429,49 +383,58 @@ impl Object {
     pub fn reshape(&mut self) {
         // border
         self.vertices_border[7] = -1.0 + self.width * self.ratio.x;
-        self.vertices_border[14] = -1.0 + self.border.size[3] * self.ratio.x;
-        self.vertices_border[15] = 1.0 - self.border.size[0] * self.ratio.y;
-        self.vertices_border[21] = -1.0 + (self.width - self.border.size[1]) * self.ratio.x;
-        self.vertices_border[22] = 1.0 - self.border.size[0] * self.ratio.y;
-        self.vertices_border[28] = -1.0 + (self.width - self.border.size[1]) * self.ratio.x;
-        self.vertices_border[29] = 1.0 - self.border.size[0] * self.ratio.y;
+        self.vertices_border[14] = -1.0 + self.border.left.0 * self.ratio.x;
+        self.vertices_border[15] = 1.0 - self.border.top.0 * self.ratio.y;
+        self.vertices_border[21] = -1.0 + (self.width - self.border.right.0) * self.ratio.x;
+        self.vertices_border[22] = 1.0 - self.border.top.0 * self.ratio.y;
+        self.vertices_border[28] = -1.0 + (self.width - self.border.right.0) * self.ratio.x;
+        self.vertices_border[29] = 1.0 - self.border.top.0 * self.ratio.y;
         self.vertices_border[35] = -1.0 + self.width * self.ratio.x;
-        self.vertices_border[42] = -1.0 + (self.width - self.border.size[1]) * self.ratio.x;
-        self.vertices_border[43] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
+        self.vertices_border[42] = -1.0 + (self.width - self.border.right.0) * self.ratio.x;
+        self.vertices_border[43] = 1.0 - (self.height - self.border.bottom.0) * self.ratio.y;
         self.vertices_border[49] = -1.0 + self.width * self.ratio.x;
         self.vertices_border[50] = 1.0 - self.height * self.ratio.y;
-        self.vertices_border[56] = -1.0 + self.border.size[3] * self.ratio.x;
-        self.vertices_border[57] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
-        self.vertices_border[63] = -1.0 + (self.width - self.border.size[1]) * self.ratio.x;
-        self.vertices_border[64] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
+        self.vertices_border[56] = -1.0 + self.border.left.0 * self.ratio.x;
+        self.vertices_border[57] = 1.0 - (self.height - self.border.bottom.0) * self.ratio.y;
+        self.vertices_border[63] = -1.0 + (self.width - self.border.right.0) * self.ratio.x;
+        self.vertices_border[64] = 1.0 - (self.height - self.border.bottom.0) * self.ratio.y;
         self.vertices_border[71] = 1.0 - self.height * self.ratio.y;
         self.vertices_border[77] = -1.0 + self.width * self.ratio.x;
         self.vertices_border[78] = 1.0 - self.height * self.ratio.y;
-        self.vertices_border[91] = -1.0 + self.border.size[3] * self.ratio.x;
-        self.vertices_border[92] = 1.0 - self.border.size[0] * self.ratio.y;
+        self.vertices_border[91] = -1.0 + self.border.left.0 * self.ratio.x;
+        self.vertices_border[92] = 1.0 - self.border.top.0 * self.ratio.y;
         self.vertices_border[99] = 1.0 - self.height * self.ratio.y;
-        self.vertices_border[105] = -1.0 + self.border.size[3] * self.ratio.x;
-        self.vertices_border[106] = 1.0 - (self.height - self.border.size[2]) * self.ratio.y;
+        self.vertices_border[105] = -1.0 + self.border.left.0 * self.ratio.x;
+        self.vertices_border[106] = 1.0 - (self.height - self.border.bottom.0) * self.ratio.y;
         // content
-        self.vertices_content[0] = -1.0 + (self.border.size[3] + self.padding[3]) * self.ratio.x;
-        self.vertices_content[1] = 1.0 - (self.border.size[0] + self.padding[0]) * self.ratio.y;
-        self.vertices_content[9] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
-        self.vertices_content[10] = 1.0 - (self.border.size[0] + self.padding[0]) * self.ratio.y;
-        self.vertices_content[18] = -1.0 + (self.border.size[3] + self.padding[3]) * self.ratio.x;
-        self.vertices_content[19] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
-        self.vertices_content[27] = -1.0 + (self.width - (self.border.size[1] + self.padding[1])) * self.ratio.x;
-        self.vertices_content[28] = 1.0 - (self.height - (self.border.size[2] + self.padding[2])) * self.ratio.y;
+        self.vertices_content[0] = -1.0 + (self.border.left.0 + self.padding[3]) * self.ratio.x;
+        self.vertices_content[1] = 1.0 - (self.border.top.0 + self.padding[0]) * self.ratio.y;
+        self.vertices_content[9] = -1.0 + (self.width - (self.border.right.0 + self.padding[1])) * self.ratio.x;
+        self.vertices_content[10] = 1.0 - (self.border.top.0 + self.padding[0]) * self.ratio.y;
+        self.vertices_content[18] = -1.0 + (self.border.left.0 + self.padding[3]) * self.ratio.x;
+        self.vertices_content[19] = 1.0 - (self.height - (self.border.bottom.0 + self.padding[2])) * self.ratio.y;
+        self.vertices_content[27] = -1.0 + (self.width - (self.border.right.0 + self.padding[1])) * self.ratio.x;
+        self.vertices_content[28] = 1.0 - (self.height - (self.border.bottom.0 + self.padding[2])) * self.ratio.y;
         self.vao_border.bind();
         self.vbo_border.set(gl::ARRAY_BUFFER, size_of_val(&self.vertices_border).cast_signed(), self.vertices_border.as_ptr().cast(), gl::STATIC_DRAW);
         self.vao_content.bind();
         self.vbo_content.set(gl::ARRAY_BUFFER, size_of_val(&self.vertices_content).cast_signed(), self.vertices_content.as_ptr().cast(), gl::STATIC_DRAW);
-        for object in &self.objects {
-            object.borrow_mut().ratio = self.ratio;
-            object.borrow_mut().reshape();
+        for child in &self.children {
+            child.borrow_mut().ratio = self.ratio;
+            child.borrow_mut().reshape();
         }
     }
 
-    pub fn render(&self) {
+    pub fn render(&mut self) {
+        let mut indices = Vec::new();
+        for (index, child) in self.children.iter().enumerate() {
+            if child.borrow().closed {
+                indices.push(index);
+            }
+        }
+        for index in indices {
+            self.children.remove(index);
+        }
         if self.hiding {
             return;
         }
@@ -503,9 +466,65 @@ impl Object {
             }
             gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
         }
-        for object in &self.objects {
-            object.borrow().render();
+        for child in &self.children {
+            child.borrow_mut().render();
         }
+    }
+
+    pub fn on_cursor_pos_event(&mut self, x: f32, y: f32) {
+        self.cursor_pos = glm::vec2(x, y);
+        self.on_cursor_child = None;
+        for (index, mut child) in self.children.iter().map(|child|{ child.borrow_mut() }).enumerate().rev() {
+            if child.global_pos.x <= self.cursor_pos.x && self.cursor_pos.x < child.global_pos.x + child.width && child.global_pos.y <= self.cursor_pos.y && self.cursor_pos.y < child.global_pos.y + child.height {
+                self.on_cursor_child = Some(index);
+                child.on_cursor_pos_event(x, y);
+                break;
+            }
+        }
+        if self.on_cursor_child != self.prev_on_cursor_child {
+            if self.on_cursor_child.is_some() {
+                self.children[self.on_cursor_child.unwrap()].borrow_mut().mouse_on();
+            }
+            if self.prev_on_cursor_child.is_some() {
+                self.children[self.prev_on_cursor_child.unwrap()].borrow_mut().mouse_off();
+            }
+        }
+        self.prev_on_cursor_child = self.on_cursor_child;
+        self.prev_cursor_pos = self.cursor_pos;
+    }
+
+    pub fn mouse_on(&mut self) {
+        spdlog::info!("{}: mouse on", self.name);
+        (self.mouse_on_event.clone().borrow_mut())(self)
+    }
+
+    pub fn mouse_off(&mut self) {
+        spdlog::info!("{}: mouse off", self.name);
+        self.pressed = false;
+        if self.prev_on_cursor_child.is_some() {
+            self.children[self.prev_on_cursor_child.unwrap()].borrow_mut().mouse_off();
+            self.on_cursor_child = None;
+        }
+        (self.mouse_off_event.clone().borrow_mut())(self);
+    }
+
+    pub fn mouse_down(&mut self) {
+        spdlog::info!("{}: mouse down", self.name);
+        self.pressed = true;
+        if let Some(on_cursor_child) = self.on_cursor_child {
+            self.children[on_cursor_child].borrow_mut().mouse_down();
+            self.bring_to_front(self.on_cursor_child.unwrap())
+        }
+        (self.mouse_down_event.clone().borrow_mut())(self);
+    }
+
+    pub fn mouse_up(&mut self) {
+        spdlog::info!("{}: mouse up", self.name);
+        self.pressed = false;
+        if let Some(on_cursor_child) = self.on_cursor_child {
+            self.children[on_cursor_child].borrow_mut().mouse_up();
+        }
+        (self.mouse_up_event.clone().borrow_mut())(self);
     }
 
     pub fn set_mouse_on_event<F>(&mut self, mouse_on_event: F) -> &mut Self where F: FnMut(&mut Self) + 'static {
@@ -529,61 +548,6 @@ impl Object {
         self
     }
 
-    pub fn on_cursor_pos_event(&mut self, x: f32, y: f32) {
-        self.cursor_pos = glm::vec2(x, y);
-        self.on_cursor_object = None;
-        for (index, mut object) in self.objects.iter().map(|object|{ object.borrow_mut() }).enumerate().rev() {
-            if object.global_pos.x <= self.cursor_pos.x && self.cursor_pos.x < object.global_pos.x + object.width && object.global_pos.y <= self.cursor_pos.y && self.cursor_pos.y < object.global_pos.y + object.height {
-                self.on_cursor_object = Some(index);
-                object.on_cursor_pos_event(x, y);
-                break;
-            }
-        }
-        if self.on_cursor_object != self.prev_on_cursor_object {
-            if self.on_cursor_object.is_some() {
-                spdlog::info!("Object({}): mouse on", self.objects[self.on_cursor_object.unwrap()].borrow().id);
-                self.objects[self.on_cursor_object.unwrap()].borrow_mut().mouse_on();
-            }
-            if self.prev_on_cursor_object.is_some() {
-                spdlog::info!("Object({}): mouse off", self.objects[self.prev_on_cursor_object.unwrap()].borrow().id);
-                self.objects[self.prev_on_cursor_object.unwrap()].borrow_mut().mouse_off();
-            }
-        }
-        self.prev_on_cursor_object = self.on_cursor_object;
-        self.prev_cursor_pos = self.cursor_pos;
-    }
-
-    pub fn mouse_on(&mut self) {
-        spdlog::info!("Object({}): mouse on", self.id);
-        (self.mouse_on_event.clone().borrow_mut())(self)
-    }
-
-    pub fn mouse_off(&mut self) {
-        spdlog::info!("Object({}): mouse off", self.id);
-        if self.prev_on_cursor_object.is_some() {
-            self.objects[self.prev_on_cursor_object.unwrap()].borrow_mut().mouse_off();
-        }
-        (self.mouse_off_event.clone().borrow_mut())(self);
-    }
-
-    pub fn mouse_down(&mut self) {
-        spdlog::info!("Object({}): mouse down", self.id);
-        self.pressed = true;
-        if let Some(on_cursor_object) = self.on_cursor_object {
-            self.objects[on_cursor_object].borrow_mut().mouse_down();
-            // self.to_front_object(self.on_cursor_object.unwrap())
-        }
-        (self.mouse_down_event.clone().borrow_mut())(self);
-    }
-
-    pub fn mouse_up(&mut self) {
-        spdlog::info!("Object({}): mouse up", self.id);
-        if let Some(on_cursor_object) = self.on_cursor_object {
-            self.objects[on_cursor_object].borrow_mut().mouse_up();
-        }
-        (self.mouse_up_event.clone().borrow_mut())(self);
-    }
-
     pub fn set_shader_type(&mut self, shader_type: ShaderType) -> &mut Self {
         if shader_type == ShaderType::Color {
             self.disable_texture();
@@ -602,45 +566,246 @@ impl Object {
         self
     }
 
-    fn enable_texture(&mut self) -> &mut Self {
-        if self.tbo.is_none() {
-            self.tbo = Some(Texture::create());
-            self.vao_content.set(2, 2, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 9) as i32, (size_of::<f32>() * 7) as *const _);
-        }
-        self
-    }
-
-    fn disable_texture(&mut self) -> &mut Self {
+    pub fn enable_texture(&mut self) -> &mut Self {
         if self.tbo.is_some() {
-            self.vao_content.bind();
-            unsafe {
-                gl::DisableVertexAttribArray(2);
-            }
-            self.tbo = None; // 자동으로 소멸자 호출
+            return self;
         }
+        self.tbo = Some(Texture::create());
+        self.vao_content.set(2, 2, gl::FLOAT, gl::FALSE, (size_of::<f32>() * 9) as i32, (size_of::<f32>() * 7) as *const _);
         self
     }
 
-    pub fn to_front_object(&mut self, index: usize) {
-        if 0 < self.objects.len() {
-            let front_object = self.objects.remove(index);
-            self.objects.push(front_object);
+    pub fn disable_texture(&mut self) -> &mut Self {
+        if self.tbo.is_none() {
+            return self;
+        }
+        self.vao_content.bind();
+        unsafe {
+            gl::DisableVertexAttribArray(2);
+        }
+        self.tbo = None; // 자동으로 소멸자 호출
+        self
+    }
 
-            if self.prev_on_cursor_object.is_some() {
-                if index < self.prev_on_cursor_object.unwrap() {
-                    self.prev_on_cursor_object = Some(self.prev_on_cursor_object.unwrap() - 1)
-                } else if index == self.prev_on_cursor_object.unwrap() {
-                    self.prev_on_cursor_object = Some(self.objects.len() - 1);
+    pub fn bring_to_front(&mut self, index: usize) {
+        if 0 < self.children.len() {
+            let front_child = self.children.remove(index);
+            self.children.push(front_child);
+
+            if self.prev_on_cursor_child.is_some() {
+                if index < self.prev_on_cursor_child.unwrap() {
+                    self.prev_on_cursor_child = Some(self.prev_on_cursor_child.unwrap() - 1)
+                } else if index == self.prev_on_cursor_child.unwrap() {
+                    self.prev_on_cursor_child = Some(self.children.len() - 1);
                 }
             }
 
-            if self.on_cursor_object.is_some() {
-                if index < self.on_cursor_object.unwrap() {
-                    self.on_cursor_object = Some(self.on_cursor_object.unwrap() - 1)
-                } else if index == self.on_cursor_object.unwrap() {
-                    self.on_cursor_object = Some(self.objects.len() - 1);
+            if self.on_cursor_child.is_some() {
+                if index < self.on_cursor_child.unwrap() {
+                    self.on_cursor_child = Some(self.on_cursor_child.unwrap() - 1)
+                } else if index == self.on_cursor_child.unwrap() {
+                    self.on_cursor_child = Some(self.children.len() - 1);
                 }
             }
         }
+    }
+}
+
+#[derive(PartialEq, Eq)]
+pub enum ShaderType {
+    Color,
+    Texture,
+    Mix,
+}
+
+#[derive(Clone, Copy)]
+pub struct Color {
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32,
+}
+
+impl Color {
+    pub fn new() -> Self {
+        Self { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }
+    }
+    pub fn from(r: f32, g: f32, b: f32, a: f32) -> Self {
+        Self { r, g, b, a }
+    }
+    pub fn from_u8(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a: a as f32 / 255.0 }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct Padding {
+    pub top: f32,
+    pub right: f32,
+    pub bottom: f32,
+    pub left: f32,
+}
+
+impl Padding {
+    pub fn new() -> Self {
+        Self { top: 0.0, right: 0.0, bottom: 0.0, left: 0.0 }
+    }
+    pub fn from_4v(top: f32, right: f32, bottom: f32, left: f32) -> Self {
+        Self { top, right, bottom, left }
+    }
+    pub fn from_3v(top_bottom: f32, right: f32, left: f32) -> Self {
+        Self { top: top_bottom, right, bottom: top_bottom, left }
+    }
+    pub fn from_2v(top_bottom: f32, right_left: f32) -> Self {
+        Self { top: top_bottom, right: right_left, bottom: top_bottom, left: right_left }
+    }
+    pub fn from_1v(top_right_bottom_left: f32) -> Self {
+        Self { top: top_right_bottom_left, right: top_right_bottom_left, bottom: top_right_bottom_left, left: top_right_bottom_left }
+    }
+    pub fn set_4v(&mut self, top: Option<f32>, right: Option<f32>, bottom: Option<f32>, left: Option<f32>) {
+        if let Some(top) = top { self.top = top; }
+        if let Some(right) = right { self.right = right; }
+        if let Some(bottom) = bottom { self.bottom = bottom; }
+        if let Some(left) = left { self.left = left; }
+    }
+    pub fn set_3v(&mut self, top_bottom: Option<f32>, right: Option<f32>, left: Option<f32>) {
+        if let Some(top_bottom) = top_bottom {
+            self.top = top_bottom;
+            self.bottom = top_bottom;
+        }
+        if let Some(right) = right { self.right = right; }
+        if let Some(left) = left { self.left = left; }
+    }
+    pub fn set_2v(&mut self, top_bottom: Option<f32>, right_left: Option<f32>) {
+        if let Some(top_bottom) = top_bottom {
+            self.top = top_bottom;
+            self.bottom = top_bottom;
+        }
+        if let Some(right_left) = right_left {
+            self.right = right_left;
+            self.left = right_left;
+        }
+    }
+    pub fn set_1v(&mut self, top_right_bottom_left: f32) {
+        self.top = top_right_bottom_left;
+        self.right = top_right_bottom_left;
+        self.bottom = top_right_bottom_left;
+        self.left = top_right_bottom_left;
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct Border {
+    pub top: (f32, Color),
+    pub right: (f32, Color),
+    pub bottom: (f32, Color),
+    pub left: (f32, Color),
+}
+
+impl Border {
+    pub fn new() -> Self {
+        Self { top: (0.0, Color::new()), right: (0.0, Color::new()), bottom: (0.0, Color::new()), left: (0.0, Color::new()) }
+    }
+    pub fn from_4v(top: (f32, Color), right: (f32, Color), bottom: (f32, Color), left: (f32, Color)) -> Self {
+        Self { top, right, bottom, left }
+    }
+    pub fn from_3v(top_bottom: (f32, Color), right: (f32, Color), left: (f32, Color)) -> Self {
+        Self { top: top_bottom, right, bottom: top_bottom, left }
+    }
+    pub fn from_2v(top_bottom: (f32, Color), right_left: (f32, Color)) -> Self {
+        Self { top: top_bottom, right: right_left, bottom: top_bottom, left: right_left }
+    }
+    pub fn from_1v(top_right_bottom_left: (f32, Color)) -> Self {
+        Self { top: top_right_bottom_left, right: top_right_bottom_left, bottom: top_right_bottom_left, left: top_right_bottom_left }
+    }
+    pub fn set_4v(&mut self, top: Option<(f32, Color)>, right: Option<(f32, Color)>, bottom: Option<(f32, Color)>, left: Option<(f32, Color)>) {
+        if let Some(top) = top { self.top = top; }
+        if let Some(right) = right { self.right = right; }
+        if let Some(bottom) = bottom { self.bottom = bottom; }
+        if let Some(left) = left { self.left = left; }
+    }
+    pub fn set_3v(&mut self, top_bottom: Option<(f32, Color)>, right: Option<(f32, Color)>, left: Option<(f32, Color)>) {
+        if let Some(top_bottom) = top_bottom {
+            self.top = top_bottom;
+            self.bottom = top_bottom;
+        }
+        if let Some(right) = right { self.right = right; }
+        if let Some(left) = left { self.left = left; }
+    }
+    pub fn set_2v(&mut self, top_bottom: Option<(f32, Color)>, right_left: Option<(f32, Color)>) {
+        if let Some(top_bottom) = top_bottom {
+            self.top = top_bottom;
+            self.bottom = top_bottom;
+        }
+        if let Some(right_left) = right_left {
+            self.right = right_left;
+            self.left = right_left;
+        }
+    }
+    pub fn set_1v(&mut self, top_right_bottom_left: (f32, Color)) {
+        self.top = top_right_bottom_left;
+        self.right = top_right_bottom_left;
+        self.bottom = top_right_bottom_left;
+        self.left = top_right_bottom_left;
+    }
+    pub fn set_size_4v(&mut self, top: Option<f32>, right: Option<f32>, bottom: Option<f32>, left: Option<f32>) {
+        if let Some(top) = top { self.top.0 = top; }
+        if let Some(right) = right { self.right.0  = right; }
+        if let Some(bottom) = bottom { self.bottom.0  = bottom; }
+        if let Some(left) = left { self.left.0  = left; }
+    }
+    pub fn set_size_3v(&mut self, top_bottom: Option<f32>, right: Option<f32>, left: Option<f32>) {
+        if let Some(top_bottom) = top_bottom {
+            self.top.0  = top_bottom;
+            self.bottom.0  = top_bottom;
+        }
+        if let Some(right) = right { self.right.0  = right; }
+        if let Some(left) = left { self.left.0  = left; }
+    }
+    pub fn set_size_2v(&mut self, top_bottom: Option<f32>, right_left: Option<f32>) {
+        if let Some(top_bottom) = top_bottom {
+            self.top.0  = top_bottom;
+            self.bottom.0  = top_bottom;
+        }
+        if let Some(right_left) = right_left {
+            self.right.0  = right_left;
+            self.left.0  = right_left;
+        }
+    }
+    pub fn set_size_1v(&mut self, top_right_bottom_left: f32) {
+        self.top.0  = top_right_bottom_left;
+        self.right.0  = top_right_bottom_left;
+        self.bottom.0  = top_right_bottom_left;
+        self.left.0  = top_right_bottom_left;
+    }
+    pub fn set_color_4v(&mut self, top: Option<Color>, right: Option<Color>, bottom: Option<Color>, left: Option<Color>) {
+        if let Some(top) = top { self.top.1 = top; }
+        if let Some(right) = right { self.right.1  = right; }
+        if let Some(bottom) = bottom { self.bottom.1  = bottom; }
+        if let Some(left) = left { self.left.1  = left; }
+    }
+    pub fn set_color_3v(&mut self, top_bottom: Option<Color>, right: Option<Color>, left: Option<Color>) {
+        if let Some(top_bottom) = top_bottom {
+            self.top.1  = top_bottom;
+            self.bottom.1  = top_bottom;
+        }
+        if let Some(right) = right { self.right.1  = right; }
+        if let Some(left) = left { self.left.1  = left; }
+    }
+    pub fn set_color_2v(&mut self, top_bottom: Option<Color>, right_left: Option<Color>) {
+        if let Some(top_bottom) = top_bottom {
+            self.top.1  = top_bottom;
+            self.bottom.1  = top_bottom;
+        }
+        if let Some(right_left) = right_left {
+            self.right.1  = right_left;
+            self.left.1  = right_left;
+        }
+    }
+    pub fn set_color_1v(&mut self, top_right_bottom_left: Color) {
+        self.top.1  = top_right_bottom_left;
+        self.right.1  = top_right_bottom_left;
+        self.bottom.1  = top_right_bottom_left;
+        self.left.1  = top_right_bottom_left;
     }
 }
