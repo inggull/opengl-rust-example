@@ -117,7 +117,7 @@ fn inner_main() -> Result<(), errors::Error> {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT); // State-using function
         }
 
-        context.render(time, delta_time);
+        // context.render(time, delta_time);
         ui_manager.render();
 
         window.swap_buffers();

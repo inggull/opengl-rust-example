@@ -59,20 +59,24 @@ impl Manager {
     }
 
     pub fn render(&mut self) {
-        // 닫힌 창이 없는지 확인
+        // 닫혀야 하는 창이 없는지 확인한다
         let mut indices = Vec::new();
         for (index, window) in self.windows.iter().enumerate() {
             if window.borrow().closed {
                 indices.push(index);
             }
         }
-        for index in indices {
-            self.windows.remove(index);
-            if self.prev_on_cursor_window == Some(index) {
-                self.prev_on_cursor_window = None;
+        // 닫혀야 하는 창이 있다면, 창을 닫고 커서 이벤트를 새로고침 한다
+        if 0 < indices.len() {
+            for index in indices {
+                self.windows.remove(index);
+                if self.prev_on_cursor_window == Some(index) {
+                    self.prev_on_cursor_window = None;
+                }
             }
+            self.on_cursor_pos_event(self.cursor_pos.x, self.cursor_pos.y);
         }
-        // 깊이 테스트 없이, 뒤에 있는 오브젝트부터 렌더링
+        // 깊이 테스트 없이, 뒤에 있는 오브젝트부터 렌더링 한다
         unsafe {
             gl::Disable(gl::DEPTH_TEST);
         }
